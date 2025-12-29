@@ -11,6 +11,7 @@
             background-color: #87CEEB; /* Sky blue fallback */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             user-select: none;
+            transition: background-color 1s; /* Smooth transition for cave */
         }
         #canvas-container {
             width: 100vw;
@@ -144,6 +145,7 @@
         .btn-shop { background: #9C27B0; width: auto; } /* Shop button in UI */
         .btn-buy { background: #4CAF50; }
         .btn-sell { background: #FF9800; }
+        .btn-cave { background: #37474F; } /* Dark blue-grey for cave */
         
         /* Cancel Circle Button */
         .btn-cancel { 
@@ -225,11 +227,23 @@
             pointer-events: auto;
             z-index: 20;
         }
+        
+        /* Cave Overlay (Optional vignette) */
+        #cave-vignette {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 50%, black 150%);
+            pointer-events: none;
+            z-index: 5;
+            display: none;
+            opacity: 0.6;
+        }
 
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
+    <div id="cave-vignette"></div>
 
     <div id="ui">
         <div class="resource-box">
@@ -264,23 +278,23 @@
     <!-- Task Menu -->
     <div id="task-menu">
         <div class="popup-row">
-            <button class="btn btn-wood" onclick="setJob('wood')" style="width:auto">
-                <!-- Axe Icon -->
-                <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 511.999 511.999" xml:space="preserve"><g><g><path d="M500.484,170.284c-6.911-2.262-13.672-4.782-20.451-7.269c-5.479-2.071-10.936-4.198-16.364-6.407c-0.006,0.045-0.014,0.088-0.019,0.134c-16.457-6.593-32.58-13.75-48.203-21.754l16.89-16.89c19.584-19.584,19.584-51.337,0-70.922c-19.584-19.584-51.337-19.584-70.922,0l-32.445,32.445c-13.261-10.353-26.221-21.215-38.661-32.954c-6.572-6.203-16.893-6.057-23.286,0.338l-94.901,94.901c-6.396,6.395-6.541,16.714-0.339,23.286c11.738,12.439,22.602,25.399,32.954,38.661L14.689,393.902c-19.585,19.584-19.585,51.337,0,70.921c19.584,19.585,51.336,19.585,70.921,0l174.495-174.496c8.003,15.624,15.161,31.749,21.75,48.205c-0.043,0.004-0.087,0.015-0.134,0.02c2.209,5.428,4.337,10.886,6.406,16.362c2.485,6.778,5.005,13.536,7.266,20.446c0.838,2.562,2.256,4.81,4.07,6.625c3.101,3.101,7.389,4.94,11.99,4.895c52.583-0.516,104.059-22.133,141.235-59.31c37.178-37.176,58.795-88.652,59.311-141.235C512.074,179.041,507.402,172.538,500.484,170.284z M385.056,70.814c6.519-6.518,17.123-6.518,23.64,0c6.519,6.518,6.519,17.122,0,23.64l-23.636,23.635c-9.798-5.828-19.379-12.021-28.808-18.472L385.056,70.814z M61.968,441.183c-6.517,6.518-17.123,6.518-23.64,0c-6.517-6.518-6.517-17.122,0-23.64l186.409-186.408c6.449,9.429,12.643,19.011,18.472,28.808L61.968,441.183z M302.317,301.147c-24.152-53.433-55.406-102.331-95.227-146.929l72.245-72.245c44.601,39.822,93.494,71.071,146.929,95.227c-7.365,29.83-22.659,57.611-44.498,79.451C359.929,278.488,332.148,293.782,302.317,301.147z M429.047,303.93c-28.212,28.211-66.296,45.689-105.973,48.967c-2.458-6.995-5.122-13.849-7.79-20.701c33.797-9.269,65.202-26.986,90.123-51.907c24.922-24.921,42.638-56.325,51.907-90.124c6.85,2.668,13.704,5.331,20.699,7.79C474.735,237.634,457.259,275.72,429.047,303.93z" fill="currentColor"/></g></g></svg>
+            <button class="btn btn-wood" onclick="setJob('wood')" style="width:auto" title="Chop Wood">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 511.999 511.999" xml:space="preserve"><g><g><path d="M500.484,170.284c-6.911-2.262-13.672-4.782-20.451-7.269c-5.479-2.071-10.936-4.198-16.364-6.407c-0.006,0.045-0.014,0.088-0.019,0.134c-16.457-6.593-32.58-13.75-48.203-21.754l16.89-16.89c19.584-19.584,19.584-51.337,0-70.922c-19.584-19.584-51.337-19.584-70.922,0l-32.445,32.445c-13.261-10.353-26.221-21.215-38.661-32.954c-6.572-6.203-16.893-6.057-23.286,0.338l-94.901,94.901c-6.396,6.395-6.541,16.714-0.339,23.286c11.738,12.439,22.602,25.399,32.954,38.661L14.689,393.902c-19.585,19.584-19.585,51.337,0,70.921c19.584,19.585,51.336,19.585,70.921,0l174.495-174.496c8.003,15.624,15.161,31.749,21.75,48.205c-0.043,0.004-0.087,0.015-0.134,0.02c2.209,5.428,4.337,10.886,6.406,16.362c2.485,6.778,5.005,13.536,7.266,20.446c0.838,2.562,2.256,4.81,4.07,6.625c3.101,3.101,7.389,4.94,11.99,4.895c52.583-0.516,104.059-22.133,141.235-59.31c37.178-37.176,58.795-88.652,59.311-141.235C512.074,179.041,507.402,172.538,500.484,170.284z M385.056,70.814c6.519-6.518,17.123-6.518-23.64,0c6.519,6.518,6.519,17.122,0-23.64l-23.636,23.635c-9.798-5.828-19.379-12.021-28.808-18.472L385.056,70.814z M61.968,441.183c-6.517,6.518-17.123,6.518-23.64,0c-6.517-6.518-6.517-17.122,0-23.64l186.409-186.408c6.449,9.429,12.643,19.011,18.472,28.808L61.968,441.183z M302.317,301.147c-24.152-53.433-55.406-102.331-95.227-146.929l72.245-72.245c44.601,39.822,93.494,71.071,146.929,95.227c-7.365,29.83-22.659,57.611-44.498,79.451C359.929,278.488,332.148,293.782,302.317,301.147z M429.047,303.93c-28.212,28.211-66.296,45.689-105.973,48.967c-2.458-6.995-5.122-13.849-7.79-20.701c33.797-9.269,65.202-26.986,90.123-51.907c24.922-24.921,42.638-56.325,51.907-90.124c6.85,2.668,13.704,5.331,20.699,7.79C474.735,237.634,457.259,275.72,429.047,303.93z" fill="currentColor"/></g></g></svg>
             </button>
-            <button class="btn btn-stone" onclick="setJob('stone')" style="width:auto">
-                <!-- Pickaxe Icon -->
+            <button class="btn btn-stone" onclick="setJob('stone')" style="width:auto" title="Mine Rock">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.02172 1.79241C3.11977 1.33042 3.52766 1 3.99994 1H7.49994C10.8167 1 13.9504 2.15662 16.5142 4.05499L16.8139 3.77241C17.2074 3.40139 17.8246 3.41046 18.207 3.79289L20.207 5.79289C20.5895 6.17532 20.5986 6.79251 20.2275 7.18601L19.945 7.48571C21.8433 10.0496 22.9999 13.1833 22.9999 16.5V20C22.9999 20.4723 22.6695 20.8802 22.2075 20.9782C21.7455 21.0763 21.2779 20.8377 21.0861 20.4061C19.5548 16.9607 17.8884 14.1436 15.9191 11.7594L5.78873 22.5551C4.82264 23.5847 3.19624 23.6105 2.19791 22.6122L1.38775 21.802C0.389428 20.8037 0.415275 19.1773 1.44482 18.2112L12.2405 8.08084C9.85633 6.11151 7.03927 4.44513 3.5938 2.91381C3.16223 2.722 2.92368 2.2544 3.02172 1.79241ZM13.7415 9.41504L2.81338 19.6696C2.60747 19.8629 2.6023 20.1881 2.80197 20.3878L3.61213 21.198C3.81179 21.3976 4.13707 21.3925 4.33029 21.1866L14.5849 10.2585C14.3099 9.97106 14.0289 9.69005 13.7415 9.41504ZM8.31869 3.02736C10.6049 4.30007 12.6125 5.70113 14.4033 7.30303C15.2115 8.026 15.9739 8.78848 16.6969 9.59669C18.2988 11.3875 19.6999 13.3951 20.9726 15.6813C20.7848 12.8712 19.6408 10.2169 17.8574 8.06282C17.2794 7.36462 16.6353 6.72057 15.9371 6.14252C13.783 4.35913 11.1287 3.21514 8.31869 3.02736Z" fill="currentColor"/></svg>
             </button>
-            <button class="btn btn-fish" onclick="setJob('fish')" style="width:auto">
+            <button class="btn btn-fish" onclick="setJob('fish')" style="width:auto" title="Fish">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2c-5.5 0-10 4.5-10 10v3M20 7l-2-2M16 11l-2-2M12 15l-2-2M7 15c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3"/><circle cx="7" cy="18" r="1"/></svg>
             </button>
-            <button class="btn btn-idle" onclick="setJob('none')" style="width:auto">
+            <button class="btn btn-idle" onclick="setJob('none')" style="width:auto" title="Idle">
                 <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/></svg>
             </button>
-            <button class="btn btn-eat" onclick="eatFood()" style="width:auto">
-                <!-- Pear Icon (White) -->
-                <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100" xml:space="preserve"><path d="M75.717 62.519a24.436 24.436 0 0 0-3.985-5.948c-3.05-3.355-4.806-7.671-4.722-12.204.004-.209.006-.419.006-.63 0-13.165-7.579-20.965-17.016-20.965s-17.16 7.8-17.16 20.965c0 .279.003.557.01.833.111 4.492-1.673 8.765-4.677 12.107-3.818 4.247-6.102 9.631-6.102 15.492 0 4.578 1.398 8.638 3.826 12.023C30.746 90.95 39.722 95 50 95c15.425 0 27.929-9.112 27.929-22.832.001-3.426-.8-6.68-2.212-9.649z" fill="currentColor"/><path d="M46.645 11.097c-2.92-3.988-7.257-5.16-12.11-6.097-1.342 1.42-1.7 3.036-.441 4.939 4.26.887 8.165 1.419 11.049 4.678a22.981 22.981 0 0 1 3.755 5.877 24.8 24.8 0 0 1 1.18 3.248c.33 1.154.196 2.574 1.526 2.872.315-2.391-.523-5.427-1.179-7.7-.809-2.793-2.059-5.468-3.78-7.817z" fill="currentColor"/><path d="M52.424 12.511c4.007-4.739 10.66-7.079 16.751-5.891.213 1.259-.179 2.547-.731 3.699-2.25 4.687-7.428 7.804-12.623 7.596-1.069-.043-2.17-.209-3.189.117s-1.92 1.368-1.636 2.399c-1.137-2.667-.38-5.781 1.428-7.92z" fill="currentColor"/></svg>
+            <button class="btn btn-eat" onclick="eatFood()" style="width:auto" title="Eat">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" x="0" y="0" viewBox="0 0 100 100" xml:space="preserve"><path d="M75.717 62.519a24.436 24.436 0 0 0-3.985-5.948c-3.05-3.355-4.806-7.671-4.722-12.204.004-.209.006-.419.006-.63 0-13.165-7.579-20.965-17.016-20.965s-17.16 7.8-17.16 20.965c0 .279.003.557.01.833.111 4.492-1.673 8.765-4.677 12.107-3.818 4.247-6.102 9.631-6.102 15.492 0 4.578 1.398 8.638 3.826 12.023C30.746 90.95 39.722 95 50 95c15.425 0 27.929-9.112 27.929-22.832.001-3.426-.8-6.68-2.212-9.649z" fill="currentColor"/><path d="M46.645 11.097c-2.92-3.988-7.257-5.16-12.11-6.097-1.342 1.42-1.7 3.036-.441 4.939 4.26.887 8.165 1.419 11.049 4.678a22.981 22.981 0 0 1 3.755 5.877 24.8 24.8 0 0 1 1.18 3.248c.33 1.154.196 2.574 1.526 2.872.315-2.391-.523-5.427-1.179-7.7-.809-2.793-2.059-5.468-3.78-7.817z" fill="currentColor"/><path d="M52.424 12.511c4.007-4.739 10.66-7.079 16.751-5.891.213 1.259-.179 2.547-.731 3.699-2.25 4.687-7.428 7.804-12.623 7.596-1.069-.043-2.17-.209-3.189.117s-1.92 1.368-1.636 2.399c-1.137-2.667-.38-5.781 1.428-7.92z" fill="currentColor"/></svg>
+            </button>
+            <button class="btn btn-cave" onclick="startCaveVisit()" style="width:auto; padding: 10px 10px;" title="Visit Cave">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h20L12 2zm0 4.5L17.5 19H6.5L12 6.5z"/></svg>
             </button>
             <button class="btn btn-cancel" onclick="closeMenu()">
                 <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
@@ -345,6 +359,8 @@
             <button id="btn-popup-feed" class="btn btn-feed" onclick="executeFeed()" style="display:none; width:auto">Feed</button>
             <button id="btn-popup-move" class="btn btn-move" onclick="startMove()" style="display:none; width:auto">Move</button>
             <button id="btn-popup-destroy" class="btn btn-close" onclick="executeDestroy()" style="width:auto">Destroy</button>
+            <button id="btn-popup-enter" class="btn btn-cave" onclick="executeEnter()" style="display:none; width:auto">Enter Cave</button>
+             <button id="btn-popup-exit" class="btn btn-cave" onclick="exitCave()" style="display:none; width:auto">Exit Cave</button>
             <button class="btn btn-cancel" onclick="closePopup()">
                 <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
             </button>
@@ -352,9 +368,8 @@
     </div>
 
     <div id="instructions">
-        Fish, Work, & Sell resources in Shop.<br>
-        Expand to find Caves & Trees.<br>
-        Click animals to Move/Feed.
+        Fish, Work, & Sell resources.<br>
+        Expand to find Caves. Visit them to find Ores!<br>
     </div>
 
     <div id="canvas-container"></div>
@@ -382,6 +397,9 @@
         let unlocks = {
             pumpkins: false
         };
+        
+        let inCave = false;
+        let lastIslandPosition = new THREE.Vector3(0, 0.4, 0);
 
         // UI Updates
         const updateUI = () => {
@@ -404,16 +422,29 @@
         };
 
         let selectedTile = null; 
-        let movingObject = null; // New global for moving items
+        let movingObject = null; 
         
         // Scene Objects
         let scene, camera, renderer, raycaster, mouse;
-        let tiles = []; 
         let water;
-        let player;
-        let gameObjects = []; 
+        let player, playerTorch;
+        let dirLight;
+
+        // World Groups
+        let islandGroup = new THREE.Group();
+        let caveGroup = new THREE.Group();
+        
+        // Arrays (pointers to active world data)
+        let islandTiles = [];
+        let caveTiles = [];
+        let islandObjects = [];
+        let caveObjects = [];
         let sharks = [];
         let floatingTexts = []; 
+        
+        // Active pointers
+        let activeTiles = islandTiles;
+        let activeObjects = islandObjects;
 
         const initialMap = [
             [0, 1, 1, 0], 
@@ -440,13 +471,19 @@
 
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambientLight);
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
             dirLight.position.set(10, 20, 10);
             dirLight.castShadow = true;
             scene.add(dirLight);
 
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
+
+            // Setup Island Group
+            scene.add(islandGroup);
+            // Setup Cave Group (Hidden initially)
+            caveGroup.visible = false;
+            scene.add(caveGroup);
 
             // Initial Land
             const geometry = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
@@ -458,13 +495,13 @@
                 }
             }
 
-            // Water
+            // Water (Added to islandGroup)
             const waterGeo = new THREE.PlaneGeometry(1000, 1000);
             const waterMat = new THREE.MeshStandardMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.8, roughness: 0.1 });
             water = new THREE.Mesh(waterGeo, waterMat);
             water.rotation.x = -Math.PI / 2;
             water.position.y = -0.2; 
-            scene.add(water);
+            islandGroup.add(water);
 
             populateIsland();
             createPlayer();
@@ -498,12 +535,12 @@
             tile.receiveShadow = true;
             tile.castShadow = true;
             tile.userData = { initialY: -0.5, gridX: x, gridZ: z, isTile: true };
-            scene.add(tile);
-            tiles.push(tile);
+            islandGroup.add(tile);
+            islandTiles.push(tile);
         }
 
         function isTileAt(x, z) {
-            return tiles.some(t => t.userData.gridX === x && t.userData.gridZ === z);
+            return activeTiles.some(t => t.userData.gridX === x && t.userData.gridZ === z);
         }
 
         function getWorldPos(gridX, gridZ) {
@@ -518,7 +555,8 @@
             createTree(getWorldPos(2, 2), {x:2, z:2});
             createTree(getWorldPos(0, 1), {x:0, z:1});
             createRock(getWorldPos(3, 1), {x:3, z:1});
-            createRock(getWorldPos(1, 3), {x:1, z:3});
+            // Ensure at least one cave on start
+            createCave(getWorldPos(1, 3), {x:1, z:3});
             createAnimal(getWorldPos(1, 2), {x:1, z:2});
             createAnimal(getWorldPos(2, 1), {x:2, z:1});
         }
@@ -531,35 +569,23 @@
             // Fin
             const finGeo = new THREE.BufferGeometry();
             const vertices = new Float32Array([
-                0, 0, 0,
-                0, 0.5, 0.2,
-                0, 0, 0.6,
-                0, 0, 0,
-                0, 0, 0.6,
-                0, 0.5, 0.2
+                0, 0, 0, 0, 0.5, 0.2, 0, 0, 0.6,
+                0, 0, 0, 0, 0, 0.6, 0, 0.5, 0.2
             ]);
             finGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
             finGeo.computeVertexNormals();
-            
             const mat = new THREE.MeshStandardMaterial({color: 0x607D8B, side: THREE.DoubleSide});
             const fin = new THREE.Mesh(finGeo, mat);
             group.add(fin);
             
-            // Random start angle
             const angle = Math.random() * Math.PI * 2;
             const radius = 15 + Math.random() * 10;
             
             group.position.set(Math.cos(angle) * radius, -0.4, Math.sin(angle) * radius);
-            group.rotation.y = -angle; // Face tangential roughly
+            group.rotation.y = -angle;
 
-            group.userData = {
-                type: 'shark',
-                angle: angle,
-                radius: radius,
-                speed: 0.2 + Math.random() * 0.2
-            };
-            
-            scene.add(group);
+            group.userData = { type: 'shark', angle: angle, radius: radius, speed: 0.2 + Math.random() * 0.2 };
+            islandGroup.add(group);
             sharks.push(group);
         }
 
@@ -567,7 +593,6 @@
             const group = new THREE.Group();
             group.position.copy(pos);
             
-            // Big Rock Mound
             const geo = new THREE.DodecahedronGeometry(0.9, 0);
             const mat = new THREE.MeshStandardMaterial({ color: 0x424242, flatShading: true });
             const rock = new THREE.Mesh(geo, mat);
@@ -576,17 +601,70 @@
             rock.castShadow = true;
             group.add(rock);
 
-            // Dark Entrance
             const entGeo = new THREE.CircleGeometry(0.4, 8);
             const entMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
             const ent = new THREE.Mesh(entGeo, entMat);
             ent.position.set(0, 0.3, 0.8);
-            ent.rotation.y = Math.PI; // Face front roughly (depends on placement rotation really, keeping simple)
+            ent.rotation.y = Math.PI; 
             group.add(ent);
 
             group.userData = { type: 'rock', resource: 'stone', gridPos: gridPos, initialY: pos.y, isCave: true };
-            scene.add(group);
-            gameObjects.push(group);
+            islandGroup.add(group);
+            islandObjects.push(group);
+        }
+        
+        function createOre(pos, gridPos, type) {
+            const group = new THREE.Group();
+            group.position.copy(pos);
+            
+            // Rock Base
+            const geo = new THREE.DodecahedronGeometry(0.5, 0);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x424242, flatShading: true });
+            const rock = new THREE.Mesh(geo, mat);
+            rock.position.y = 0.3;
+            rock.castShadow = true;
+            group.add(rock);
+            
+            // Crystals
+            let color = 0xFFD700; // Gold
+            if (type === 'iron') color = 0xA1887F;
+            else if (type === 'diamond') color = 0x29B6F6;
+            
+            const cryGeo = new THREE.ConeGeometry(0.1, 0.4, 4);
+            const cryMat = new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.5 });
+            
+            for(let i=0; i<3; i++) {
+                const c = new THREE.Mesh(cryGeo, cryMat);
+                c.position.set((Math.random()-0.5)*0.4, 0.5, (Math.random()-0.5)*0.4);
+                c.rotation.set(Math.random(), Math.random(), Math.random());
+                group.add(c);
+            }
+
+            group.userData = { type: 'ore', resource: 'stone', oreType: type, gridPos: gridPos, initialY: pos.y };
+            caveGroup.add(group);
+            caveObjects.push(group);
+        }
+        
+        function createLadder(pos, gridPos) {
+            const group = new THREE.Group();
+            group.position.copy(pos);
+            
+            const railGeo = new THREE.BoxGeometry(0.1, 1.5, 0.1);
+            const railMat = new THREE.MeshStandardMaterial({ color: 0x8D6E63 });
+            const l = new THREE.Mesh(railGeo, railMat); l.position.set(-0.3, 0.75, 0);
+            const r = new THREE.Mesh(railGeo, railMat); r.position.set(0.3, 0.75, 0);
+            group.add(l, r);
+            
+            const rungGeo = new THREE.BoxGeometry(0.7, 0.05, 0.05);
+            for(let i=0; i<5; i++) {
+                const rung = new THREE.Mesh(rungGeo, railMat);
+                rung.position.set(0, 0.3 + i*0.3, 0);
+                group.add(rung);
+            }
+            
+            group.userData = { type: 'exit', gridPos: gridPos, initialY: pos.y };
+            caveGroup.add(group);
+            caveObjects.push(group);
         }
 
         function createTree(pos, gridPos) {
@@ -605,8 +683,8 @@
             leaves.castShadow = true;
             group.add(leaves);
             group.userData = { type: 'tree', resource: 'wood', gridPos: gridPos, initialY: pos.y };
-            scene.add(group);
-            gameObjects.push(group);
+            islandGroup.add(group);
+            islandObjects.push(group);
         }
 
         function createRock(pos, gridPos) {
@@ -618,8 +696,8 @@
             rock.rotation.set(Math.random(), Math.random(), Math.random());
             rock.castShadow = true;
             rock.userData = { type: 'rock', resource: 'stone', gridPos: gridPos, initialY: 0.3 };
-            scene.add(rock);
-            gameObjects.push(rock);
+            islandGroup.add(rock);
+            islandObjects.push(rock);
         }
 
         function createFarm(pos, gridPos, isPumpkin = false) {
@@ -650,7 +728,6 @@
             let cropMat;
 
             if (isPumpkin) {
-                // Pumpkins
                 cropMat = new THREE.MeshStandardMaterial({ color: 0xFF9800 });
                 for(let x=-1; x<=1; x+=2) {
                     for(let z=-1; z<=1; z+=2) {
@@ -662,7 +739,6 @@
                     }
                 }
             } else {
-                // Wheat
                 cropMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
                 for(let x=-1; x<=1; x++) {
                     for(let z=-1; z<=1; z++) {
@@ -693,14 +769,13 @@
                 initialY: pos.y,
                 isPumpkin: isPumpkin
             };
-            scene.add(group);
-            gameObjects.push(group);
+            islandGroup.add(group);
+            islandObjects.push(group);
         }
 
         function createCampfire(pos, gridPos) {
             const group = new THREE.Group();
             group.position.copy(pos);
-            
             const stoneGeo = new THREE.DodecahedronGeometry(0.15);
             const stoneMat = new THREE.MeshStandardMaterial({color: 0x555555});
             for(let i=0; i<8; i++) {
@@ -709,16 +784,14 @@
                 mesh.position.set(Math.cos(angle)*0.4, 0.1, Math.sin(angle)*0.4);
                 group.add(mesh);
             }
-            
             const fireGeo = new THREE.ConeGeometry(0.25, 0.5, 4);
             const fireMat = new THREE.MeshBasicMaterial({color: 0xFF5722});
             const fire = new THREE.Mesh(fireGeo, fireMat);
             fire.position.y = 0.3;
             group.add(fire);
-
             group.userData = { type: 'campfire', gridPos: gridPos, initialY: pos.y, fireMesh: fire };
-            scene.add(group);
-            gameObjects.push(group);
+            islandGroup.add(group);
+            islandObjects.push(group);
         }
 
         function createAnimal(pos, gridPos, isBaby = false) {
@@ -745,7 +818,6 @@
             nose.position.set(0, 0.55, 0.76);
             group.add(nose);
 
-            // Heart
             const heartGeo = new THREE.SphereGeometry(0.2);
             const heartMat = new THREE.MeshBasicMaterial({color: 0xFF0000});
             const heart = new THREE.Mesh(heartGeo, heartMat);
@@ -757,15 +829,14 @@
                 type: 'animal',
                 gridPos: gridPos,
                 initialY: pos.y,
-                // Removed moveTimer
                 loveMode: false,
                 loveTimer: 0,
                 heartRef: heart,
                 isBaby: isBaby,
                 growthTimer: isBaby ? Date.now() : 0
             };
-            scene.add(group);
-            gameObjects.push(group);
+            islandGroup.add(group);
+            islandObjects.push(group);
         }
 
         function createPlayer() {
@@ -787,34 +858,144 @@
             eye2.position.set(-0.15, 0.1, 0.41); 
             player.add(eye2);
 
-            // Hunger Marks
-            const markMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
-            const singleMark = new THREE.Group();
-            const part1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.1), markMat);
-            part1.position.y = 0.25;
-            const dot1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), markMat);
-            dot1.position.y = 0.0;
-            singleMark.add(part1, dot1);
-            singleMark.position.set(0, 0.8, 0);
-            singleMark.visible = false;
-            player.add(singleMark);
+            // Torch (for cave)
+            playerTorch = new THREE.PointLight(0xffaa00, 0, 8);
+            playerTorch.position.set(0, 1, 0);
+            player.add(playerTorch);
 
-            const doubleMark = new THREE.Group();
-            const lPart = part1.clone(); lPart.position.x = -0.15;
-            const lDot = dot1.clone(); lDot.position.x = -0.15;
-            const rPart = part1.clone(); rPart.position.x = 0.15;
-            const rDot = dot1.clone(); rDot.position.x = 0.15;
-            doubleMark.add(lPart, lDot, rPart, rDot);
-            doubleMark.position.set(0, 0.8, 0);
-            doubleMark.visible = false;
-            player.add(doubleMark);
-
-            player.userData.hungerIndicators = { single: singleMark, double: doubleMark };
             player.userData.isPlayer = true;
-            scene.add(player);
+            scene.add(player); // Player is in global scene
         }
 
         // --- Logic ---
+        
+        // Cave Management
+        window.startCaveVisit = function() {
+             if (inCave) return;
+             
+             // Find nearest cave
+             let cave = null;
+             let minD = Infinity;
+             activeObjects.forEach(obj => {
+                 if (obj.userData.isCave) {
+                     const d = player.position.distanceTo(obj.position);
+                     if (d < minD) { minD = d; cave = obj; }
+                 }
+             });
+
+             if (cave) {
+                 closeMenu();
+                 playerState.target = cave;
+                 playerState.isMoving = true;
+                 
+                 // Fake standPos logic for now, just go to cave center
+                 playerState.standPos = cave.position.clone();
+                 playerState.standPos.y = 0.4;
+                 createFloatingText("Going to Cave...", player.position, '#FFFFFF');
+             } else {
+                 createFloatingText("No Cave Found!", player.position, '#FF0000');
+             }
+        }
+
+        function enterCave() {
+            if(inCave) return;
+            inCave = true;
+            lastIslandPosition.copy(player.position);
+            
+            // Generate Cave if needed (simple: clear old cave, make new one)
+            generateCaveWorld();
+            
+            islandGroup.visible = false;
+            caveGroup.visible = true;
+            scene.background = new THREE.Color(0x212121);
+            document.body.style.backgroundColor = "#212121";
+            document.getElementById('cave-vignette').style.display = 'block';
+            
+            // Switch active arrays
+            activeTiles = caveTiles;
+            activeObjects = caveObjects;
+            
+            // Move Player
+            player.position.set(0, 0.4, 0);
+            playerState.target = null; playerState.isMoving = false; playerState.standPos = null;
+            
+            // Lighting
+            dirLight.intensity = 0.1;
+            playerTorch.intensity = 1;
+
+            createFloatingText("Underground", player.position, '#FFFFFF');
+        }
+
+        function exitCave() {
+            if(!inCave) return;
+            inCave = false;
+            
+            islandGroup.visible = true;
+            caveGroup.visible = false;
+            scene.background = new THREE.Color(0x87CEEB);
+            document.body.style.backgroundColor = "#87CEEB";
+             document.getElementById('cave-vignette').style.display = 'none';
+
+            // Switch active arrays
+            activeTiles = islandTiles;
+            activeObjects = islandObjects;
+
+            // Move Player
+            player.position.copy(lastIslandPosition);
+            // Nudge back so not inside cave mesh
+            player.position.z += 1.5; 
+            playerState.target = null; playerState.isMoving = false;
+            
+            // Lighting
+            dirLight.intensity = 0.7;
+            playerTorch.intensity = 0;
+            
+            closePopup();
+            createFloatingText("Fresh Air!", player.position, '#87CEEB');
+        }
+
+        function generateCaveWorld() {
+            // Clear old cave
+            while(caveGroup.children.length > 0){ 
+                caveGroup.remove(caveGroup.children[0]); 
+            }
+            caveTiles = [];
+            caveObjects = [];
+
+            // Create Grid 5x5
+            const caveGeo = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
+            const matTop = new THREE.MeshStandardMaterial({ color: 0x616161 }); // Dark Grey
+            const matSide = new THREE.MeshStandardMaterial({ color: 0x424242 });
+            const materials = [matSide, matSide, matTop, matSide, matSide, matSide];
+
+            for(let z=-2; z<=2; z++) {
+                for(let x=-2; x<=2; x++) {
+                    const pos = getWorldPos(x, z);
+                    const tile = new THREE.Mesh(caveGeo, materials);
+                    tile.position.copy(pos);
+                    tile.position.y = -0.5;
+                    tile.receiveShadow = true;
+                    tile.userData = { initialY: -0.5, gridX: x, gridZ: z, isTile: true };
+                    caveGroup.add(tile);
+                    caveTiles.push(tile);
+                    
+                    // Center is ladder
+                    if (x===0 && z===0) {
+                        createLadder(pos, {x,z});
+                    } else {
+                        // Chance for Ore
+                        if (Math.random() < 0.4) {
+                            let type = 'gold';
+                            let r = Math.random();
+                            if(r > 0.7) type = 'diamond';
+                            else if(r > 0.4) type = 'iron';
+                            createOre(pos, {x,z}, type);
+                        }
+                    }
+                }
+            }
+        }
+
 
         function harvest(object) {
             playerState.hunger = Math.max(0, playerState.hunger - 2);
@@ -826,11 +1007,36 @@
                 object.scale.set(1.2, 0.8, 1.2); 
             } 
             else if (object.userData.resource === 'stone') {
-                // If it's a cave, maybe double resources?
-                let amount = object.userData.isCave ? 2 : 1;
-                resources.stone += amount;
-                createFloatingText("+" + amount + " Stone", object.position, '#bdbdbd');
-                object.scale.set(1.2, 0.8, 1.2); 
+                if (object.userData.type === 'ore') {
+                    // Ore logic
+                    resources.stone += 2;
+                    let val = 1;
+                    let txt = "+2 Stone";
+                    let col = '#cfd8dc';
+                    
+                    if(object.userData.oreType === 'gold') { val=5; txt+=", +5 Coins"; col='#FFD700'; }
+                    if(object.userData.oreType === 'iron') { val=3; txt+=", +3 Coins"; col='#A1887F'; }
+                    if(object.userData.oreType === 'diamond') { val=15; txt+=", +15 Coins"; col='#29B6F6'; }
+                    
+                    resources.coins += val;
+                    createFloatingText(txt, object.position, col);
+                    
+                    // Destroy ore
+                    scene.remove(object); // Wait, need to remove from group
+                    if(inCave) caveGroup.remove(object);
+                    else islandGroup.remove(object);
+                    
+                    let arr = inCave ? caveObjects : islandObjects;
+                    const idx = arr.indexOf(object);
+                    if(idx > -1) arr.splice(idx, 1);
+                    return; // Don't do scale anim if removed
+                    
+                } else {
+                    let amount = object.userData.isCave ? 2 : 1;
+                    resources.stone += amount;
+                    createFloatingText("+" + amount + " Stone", object.position, '#cfd8dc');
+                    object.scale.set(1.2, 0.8, 1.2); 
+                }
             }
             else if (object.userData.resource === 'food') {
                 let amount = object.userData.isPumpkin ? 2 : 1;
@@ -849,15 +1055,15 @@
         function createFloatingText(text, pos, color) {
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            canvas.width = 256;
+            canvas.width = 300; // Wider for ore text
             canvas.height = 128;
-            context.font = "Bold 40px Arial";
+            context.font = "Bold 36px Arial";
             context.fillStyle = color;
             context.textAlign = "center";
             context.strokeStyle = 'black';
             context.lineWidth = 3;
-            context.strokeText(text, 128, 100);
-            context.fillText(text, 128, 100);
+            context.strokeText(text, 150, 100);
+            context.fillText(text, 150, 100);
 
             const texture = new THREE.CanvasTexture(canvas);
             const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
@@ -865,125 +1071,95 @@
             
             sprite.position.copy(pos);
             sprite.position.y += 1.5;
-            sprite.scale.set(4, 2, 1);
+            sprite.scale.set(5, 2, 1);
             sprite.userData = { life: 1.0 }; 
             scene.add(sprite);
             floatingTexts.push(sprite);
         }
 
         // --- Shop & Economy ---
-        
         window.openShop = function() {
             document.getElementById('task-menu').style.display = 'none';
             document.getElementById('build-menu').style.display = 'none';
             document.getElementById('tile-popup').style.display = 'none';
             document.getElementById('shop-menu').style.display = 'flex';
         }
-        
-        window.closeShop = function() {
-            document.getElementById('shop-menu').style.display = 'none';
-        }
-
+        window.closeShop = function() { document.getElementById('shop-menu').style.display = 'none'; }
         window.sell = function(item) {
             let price = 0;
             if (item === 'wood' && resources.wood > 0) { resources.wood--; price = 1; }
             else if (item === 'stone' && resources.stone > 0) { resources.stone--; price = 1; }
             else if (item === 'fish' && resources.fish > 0) { resources.fish--; price = 5; }
             else if (item === 'food' && resources.food > 0) { resources.food--; price = 2; }
-            
-            if(price > 0) {
-                resources.coins += price;
-                updateUI();
-            }
+            if(price > 0) { resources.coins += price; updateUI(); }
         }
-
         window.buy = function(item) {
-            if (item === 'wood' && resources.coins >= 10) {
-                resources.coins -= 10;
-                resources.wood += 5;
-            }
+            if (item === 'wood' && resources.coins >= 10) { resources.coins -= 10; resources.wood += 5; }
             else if (item === 'pumpkin_seeds' && resources.coins >= 50) {
-                resources.coins -= 50;
-                unlocks.pumpkins = true;
-                document.getElementById('seed-offer').style.display = 'none'; // Remove from shop
-                document.getElementById('btn-pumpkin').style.display = 'inline-block'; // Add to build
+                resources.coins -= 50; unlocks.pumpkins = true;
+                document.getElementById('seed-offer').style.display = 'none'; 
+                document.getElementById('btn-pumpkin').style.display = 'inline-block';
                 alert("Unlocked Pumpkin Farming!");
             }
             updateUI();
         }
 
         // --- Interaction ---
-
         window.construct = function(type) {
+            if(inCave) { createFloatingText("Can't build here!", player.position, '#FF0000'); return; }
+
             if (type === 'expansion') {
                 if(resources.wood >= 10 && resources.stone >= 10) {
-                    resources.wood -= 10;
-                    resources.stone -= 10;
-                    updateUI();
-                    
-                    minGridX--; maxGridX++;
-                    minGridZ--; maxGridZ++;
-
+                    resources.wood -= 10; resources.stone -= 10; updateUI();
+                    minGridX--; maxGridX++; minGridZ--; maxGridZ++;
                     const geometry = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
                     for(let z=minGridZ; z<=maxGridZ; z++) {
                         for(let x=minGridX; x<=maxGridX; x++) {
                             if(!isTileAt(x, z)) {
                                 createLandTile(x, z, geometry);
-                                // Spawn Resources (High Chance)
                                 if(Math.random() < 0.4) {
                                     const pos = getWorldPos(x, z);
                                     let rand = Math.random();
                                     if(rand < 0.5) createTree(pos, {x,z});
                                     else if(rand < 0.8) createRock(pos, {x,z});
-                                    else createCave(pos, {x,z}); // 20% of spawns are caves
+                                    else createCave(pos, {x,z}); 
                                 }
                             }
                         }
                     }
                     createFloatingText("Island Expanded!", player.position, '#673AB7');
                     closeBuildMenu();
-                } else {
-                    createFloatingText("Need Resources!", player.position, '#FF0000');
-                }
+                } else { createFloatingText("Need Resources!", player.position, '#FF0000'); }
                 return;
             }
 
             if (!selectedTile) return;
-
-            if (type === 'farm' || type === 'pumpkin') {
+            // ... (Simple construction checks)
+             if (type === 'farm' || type === 'pumpkin') {
                 let wCost = type === 'pumpkin' ? 8 : 6;
                 let sCost = type === 'pumpkin' ? 8 : 4;
                 if(resources.wood >= wCost && resources.stone >= sCost) {
-                    resources.wood -= wCost;
-                    resources.stone -= sCost;
-                    updateUI();
+                    resources.wood -= wCost; resources.stone -= sCost; updateUI();
                     createFarm(selectedTile.worldPos, {x: selectedTile.gridX, z: selectedTile.gridZ}, type === 'pumpkin');
                     createFloatingText("Farm Built!", selectedTile.worldPos, '#FFFFFF');
                     closeBuildMenu();
-                } else {
-                     createFloatingText("Need Resources!", player.position, '#FF0000');
-                }
+                } else createFloatingText("Need Resources!", player.position, '#FF0000');
             } else if (type === 'campfire') {
                 if(resources.wood >= 5 && resources.stone >= 5) {
-                    resources.wood -= 5;
-                    resources.stone -= 5;
-                    updateUI();
+                    resources.wood -= 5; resources.stone -= 5; updateUI();
                     createCampfire(selectedTile.worldPos, {x: selectedTile.gridX, z: selectedTile.gridZ});
                     createFloatingText("Campfire Built!", selectedTile.worldPos, '#FF5722');
                     closeBuildMenu();
-                } else {
-                     createFloatingText("Need Resources!", player.position, '#FF0000');
-                }
+                } else createFloatingText("Need Resources!", player.position, '#FF0000');
             }
         }
         
-        // ... (Keep existing feed/cook/harvest/destroy logic)
         window.executeDestroy = function() {
             if (!selectedTile || !selectedTile.occupiedBy) return;
             const obj = selectedTile.occupiedBy;
-            scene.remove(obj);
-            const index = gameObjects.indexOf(obj);
-            if (index > -1) gameObjects.splice(index, 1);
+            if (inCave) caveGroup.remove(obj); else islandGroup.remove(obj);
+            const index = activeObjects.indexOf(obj);
+            if (index > -1) activeObjects.splice(index, 1);
             createFloatingText("Destroyed!", selectedTile.worldPos, '#FF0000');
             closePopup();
         }
@@ -995,10 +1171,8 @@
         window.executeCook = function() {
             if (!selectedTile || !selectedTile.occupiedBy) return;
             if(resources.fish >= 1 && resources.wood >= 1) {
-                resources.fish--; resources.wood--; resources.food += 3;
-                updateUI();
-                createFloatingText("+3 Food!", selectedTile.worldPos, '#FFD700');
-                closePopup();
+                resources.fish--; resources.wood--; resources.food += 3; updateUI();
+                createFloatingText("+3 Food!", selectedTile.worldPos, '#FFD700'); closePopup();
             } else { createFloatingText("Need Fish & Wood!", selectedTile.worldPos, '#FF0000'); }
         }
         window.executeFeed = function() {
@@ -1007,16 +1181,13 @@
             if(resources.food >= 1) {
                 if(!animal.userData.loveMode && !animal.userData.isBaby) {
                     resources.food--; updateUI();
-                    animal.userData.loveMode = true;
-                    animal.userData.loveTimer = 600;
-                    animal.userData.heartRef.visible = true;
-                    createFloatingText("Love!", animal.position, '#E91E63');
-                    closePopup();
+                    animal.userData.loveMode = true; animal.userData.loveTimer = 600; animal.userData.heartRef.visible = true;
+                    createFloatingText("Love!", animal.position, '#E91E63'); closePopup();
                 } else createFloatingText("Not Hungry!", animal.position, '#FFFFFF');
             } else createFloatingText("Need Food!", animal.position, '#FF0000');
         }
+        window.executeEnter = function() { closePopup(); startCaveVisit(); } // For cave tile popup
 
-        // New Move Logic
         window.startMove = function() {
             if (!selectedTile || !selectedTile.occupiedBy) return;
             movingObject = selectedTile.occupiedBy;
@@ -1024,8 +1195,8 @@
             closePopup();
         }
 
-        // ... (Keep existing UI helper functions)
-        function updateBuildCostUI() { /* ... kept simple ... */ }
+        // ... UI helpers ...
+        function updateBuildCostUI() { }
         function updateHungerUI() {
              const bar = document.getElementById('hunger-bar');
              bar.style.width = playerState.hunger + '%';
@@ -1055,7 +1226,6 @@
         }
         window.closeBuildMenu = function() { document.getElementById('build-menu').style.display = 'none'; resetSelection(); }
         
-        // ... (Keep highlight/reset logic)
         function highlightTile(tileMesh, occupant) {
              if (selectedTile && selectedTile.mesh && selectedTile.mesh !== tileMesh) {
                  selectedTile.mesh.position.y = selectedTile.mesh.userData.initialY;
@@ -1075,7 +1245,6 @@
         function onPointerDown(event) {
             if (event.target.closest('#tile-popup') || event.target.closest('#task-menu') || event.target.closest('#build-menu') || event.target.closest('#shop-menu') || event.target.closest('#shop-toggle-container')) return;
             
-            // Close all
             document.getElementById('tile-popup').style.display = 'none';
             document.getElementById('build-menu').style.display = 'none';
             document.getElementById('task-menu').style.display = 'none';
@@ -1085,16 +1254,15 @@
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
             raycaster.setFromCamera(mouse, camera);
 
-            // Handle Move Logic
+            // Handle Move Logic (Moving animals/items)
             if (movingObject) {
-                const tileIntersects = raycaster.intersectObjects(tiles);
+                const tileIntersects = raycaster.intersectObjects(activeTiles);
                 if (tileIntersects.length > 0) {
                     const tile = tileIntersects[0].object;
                     const gx = tile.userData.gridX;
                     const gz = tile.userData.gridZ;
                     
-                    // Check if occupied
-                    const isOccupied = gameObjects.some(obj => {
+                    const isOccupied = activeObjects.some(obj => {
                         const oGrid = obj.userData.gridPos || obj.parent.userData.gridPos;
                         return oGrid.x === gx && oGrid.z === gz && obj !== movingObject; 
                     });
@@ -1105,28 +1273,10 @@
                         movingObject.userData.gridPos = {x: gx, z: gz};
                         movingObject = null;
                         createFloatingText("Moved!", pos, '#FFFFFF');
-                    } else {
-                        createFloatingText("Occupied!", tile.position, '#FF0000');
-                    }
-                } else {
-                    movingObject = null;
-                    createFloatingText("Cancelled", player.position, '#FFFFFF');
-                }
+                    } else { createFloatingText("Occupied!", tile.position, '#FF0000'); }
+                } else { movingObject = null; createFloatingText("Cancelled", player.position, '#FFFFFF'); }
                 return;
             }
-
-            // Check Farms first
-            const sceneIntersects = raycaster.intersectObjects(scene.children, true);
-            let clickedFarm = null;
-            for(let i=0; i<sceneIntersects.length; i++) {
-                let obj = sceneIntersects[i].object;
-                while(obj.parent && obj.parent.type !== 'Scene') {
-                    if(obj.userData.type === 'farm') { clickedFarm = obj; break; }
-                    obj = obj.parent;
-                }
-                if(clickedFarm) break;
-            }
-            if(clickedFarm && clickedFarm.userData.isReady) { resetSelection(); harvest(clickedFarm); return; }
 
             // Check Player
             const playerIntersect = raycaster.intersectObject(player, true);
@@ -1141,12 +1291,12 @@
             }
 
             // Check Tiles
-            const tileIntersects = raycaster.intersectObjects(tiles);
+            const tileIntersects = raycaster.intersectObjects(activeTiles);
             if(tileIntersects.length > 0) {
                 const tile = tileIntersects[0].object;
                 const gridPos = { x: tile.userData.gridX, z: tile.userData.gridZ };
                 let occupant = null;
-                gameObjects.forEach(obj => {
+                activeObjects.forEach(obj => {
                     const oGrid = obj.userData.gridPos || obj.parent.userData.gridPos;
                     if(oGrid.x === gridPos.x && oGrid.z === gridPos.z) occupant = obj;
                 });
@@ -1161,22 +1311,26 @@
                 const btnCook = document.getElementById('btn-popup-cook');
                 const btnFeed = document.getElementById('btn-popup-feed');
                 const btnMove = document.getElementById('btn-popup-move');
+                const btnEnter = document.getElementById('btn-popup-enter');
+                const btnExit = document.getElementById('btn-popup-exit');
 
                 btnBuild.style.display = 'none'; btnDestroy.style.display = 'none';
-                btnHarvest.style.display = 'none'; btnCook.style.display = 'none'; btnFeed.style.display = 'none';
-                btnMove.style.display = 'none';
+                btnHarvest.style.display = 'none'; btnCook.style.display = 'none'; 
+                btnFeed.style.display = 'none'; btnMove.style.display = 'none';
+                btnEnter.style.display = 'none'; btnExit.style.display = 'none';
 
                 const dist = player.position.distanceTo(tile.position);
-                if (dist > 0.5) { 
+                if (dist > 0.5 || (occupant && occupant.userData.type === 'exit')) { 
                     if (occupant) {
                         btnDestroy.style.display = 'block';
                         if (occupant.userData.type === 'farm') btnHarvest.style.display = 'block';
+                        if (occupant.userData.type === 'ore') btnHarvest.style.display = 'block';
                         if (occupant.userData.type === 'campfire') btnCook.style.display = 'block';
-                        if (occupant.userData.type === 'animal') {
-                            btnFeed.style.display = 'block';
-                            btnMove.style.display = 'block';
-                        }
-                    } else btnBuild.style.display = 'block';
+                        if (occupant.userData.type === 'animal') { btnFeed.style.display = 'block'; btnMove.style.display = 'block'; }
+                        if (occupant.userData.type === 'exit') { btnExit.style.display = 'block'; btnDestroy.style.display = 'none'; }
+                        if (occupant.userData.isCave) { btnEnter.style.display = 'block'; }
+                    } else if (!inCave) btnBuild.style.display = 'block';
+                    
                     popup.style.display = 'flex';
                     popup.style.left = event.clientX + 'px';
                     popup.style.top = (event.clientY - 20) + 'px';
@@ -1188,7 +1342,6 @@
         function update() {
             const time = Date.now() * 0.001;
             
-            // Update Sharks
             sharks.forEach(shark => {
                 const s = shark.userData;
                 s.angle += s.speed * 0.01;
@@ -1198,51 +1351,41 @@
             
             updatePlayer(time); 
             
-            // Object animations
-            gameObjects.forEach(obj => {
+            activeObjects.forEach(obj => {
                 if(obj.userData.type === 'farm' && !obj.userData.isReady) {
                     obj.userData.timer++;
                     const progress = obj.userData.timer / obj.userData.growthTime;
                     if(progress >= 1) {
                          obj.userData.isReady = true;
                          obj.userData.cropsRef.scale.set(1,1,1);
-                         obj.userData.cropMatRef.color.setHex(0xFFD700); // Gold
-                         if (obj.userData.isPumpkin) obj.userData.cropMatRef.color.setHex(0xFF6D00); // Deep Orange
+                         obj.userData.cropMatRef.color.setHex(obj.userData.isPumpkin ? 0xFF6D00 : 0xFFD700); 
                     } else {
                         const s = 0.1 + progress * 0.9;
                         obj.userData.cropsRef.scale.set(s,s,s);
                     }
                 }
-                // Animal logic (breeding only, wandering removed)
                 if(obj.userData.type === 'animal') {
-                     // Growth
                      if(obj.userData.isBaby && Date.now() - obj.userData.growthTimer > 10000) {
-                         obj.userData.isBaby = false;
-                         obj.scale.set(1,1,1);
+                         obj.userData.isBaby = false; obj.scale.set(1,1,1);
                          createFloatingText("Grew up!", obj.position, '#F48FB1');
                      }
-                     // Breeding
                      if(obj.userData.loveMode) {
                         obj.userData.loveTimer--;
                         if(obj.userData.loveTimer<=0) {
                             obj.userData.loveMode = false; obj.userData.heartRef.visible = false;
                         } else {
-                            const partner = gameObjects.find(o => o !== obj && o.userData.type === 'animal' && o.userData.loveMode);
-                            if(partner) {
-                                // Only breed if close
-                                if (obj.position.distanceTo(partner.position) < 1.5) {
-                                    obj.userData.loveMode = false; obj.userData.heartRef.visible = false;
-                                    partner.userData.loveMode = false; partner.userData.heartRef.visible = false;
-                                    createFloatingText("Baby!", obj.position, '#F06292');
-                                    // Try to find spot
-                                    const gx = obj.userData.gridPos.x;
-                                    const gz = obj.userData.gridPos.z;
-                                    const neighbors = [{x:gx+1, z:gz}, {x:gx-1, z:gz}, {x:gx, z:gz+1}, {x:gx, z:gz-1}];
-                                    for(let n of neighbors) {
-                                        if(isTileAt(n.x, n.z) && !gameObjects.some(o=>(o.userData.gridPos||o.parent.userData.gridPos).x===n.x && (o.userData.gridPos||o.parent.userData.gridPos).z===n.z)) {
-                                            createAnimal(getWorldPos(n.x, n.z), n, true);
-                                            break;
-                                        }
+                            const partner = activeObjects.find(o => o !== obj && o.userData.type === 'animal' && o.userData.loveMode);
+                            if(partner && obj.position.distanceTo(partner.position) < 1.5) {
+                                obj.userData.loveMode = false; obj.userData.heartRef.visible = false;
+                                partner.userData.loveMode = false; partner.userData.heartRef.visible = false;
+                                createFloatingText("Baby!", obj.position, '#F06292');
+                                const gx = obj.userData.gridPos.x;
+                                const gz = obj.userData.gridPos.z;
+                                const neighbors = [{x:gx+1, z:gz}, {x:gx-1, z:gz}, {x:gx, z:gz+1}, {x:gx, z:gz-1}];
+                                for(let n of neighbors) {
+                                    if(isTileAt(n.x, n.z) && !activeObjects.some(o=>(o.userData.gridPos||o.parent.userData.gridPos).x===n.x && (o.userData.gridPos||o.parent.userData.gridPos).z===n.z)) {
+                                        createAnimal(getWorldPos(n.x, n.z), n, true);
+                                        break;
                                     }
                                 }
                             }
@@ -1251,7 +1394,6 @@
                 }
             });
             
-            // Float text
              for(let i = floatingTexts.length - 1; i >= 0; i--) {
                 const sprite = floatingTexts[i];
                 sprite.position.y += 0.05; sprite.userData.life -= 0.02;
@@ -1266,17 +1408,19 @@
                 if(playerState.hunger < 0) playerState.hunger = 0;
                 if(document.getElementById('task-menu').style.display !== 'none') updateHungerUI();
             }
-            if (playerState.job === 'none') { player.position.y = 0.4; return; }
+            if (playerState.job === 'none' && !playerState.target) { player.position.y = 0.4; return; }
 
-            if (!playerState.target && !playerState.isMoving && !playerState.standPos) {
+            // Job Finding Logic
+            if (!playerState.target && !playerState.isMoving && !playerState.standPos && playerState.job !== 'none') {
                  if (playerState.job === 'fish') {
+                     // ... Fish Logic (simplified to work with currentTiles)
                     let validSpots = [];
-                    tiles.forEach(tile => {
+                    activeTiles.forEach(tile => {
                         const gx = tile.userData.gridX; const gz = tile.userData.gridZ;
-                        const occupied = gameObjects.some(o => { const og = o.userData.gridPos || o.parent.userData.gridPos; return og.x === gx && og.z === gz; });
+                        const occupied = activeObjects.some(o => { const og = o.userData.gridPos || o.parent.userData.gridPos; return og.x === gx && og.z === gz; });
                         if(!occupied) {
                              const neighbors = [{x:gx+1, z:gz}, {x:gx-1, z:gz}, {x:gx, z:gz+1}, {x:gx, z:gz-1}];
-                             const waterN = neighbors.find(n => !isTileAt(n.x, n.z));
+                             const waterN = neighbors.find(n => !isTileAt(n.x, n.z)); // Works if no tile there
                              if(waterN) validSpots.push({pos: tile.position, lookAt: getWorldPos(waterN.x, waterN.z)});
                         }
                     });
@@ -1288,14 +1432,21 @@
                     }
                     return;
                  }
+                 
+                 // Wood/Stone Logic
                  const targetType = playerState.job === 'wood' ? 'tree' : 'rock';
-                 let targets = gameObjects.filter(o => (o.userData.type === targetType) || (targetType === 'rock' && o.userData.isCave));
+                 let targets = activeObjects.filter(o => {
+                     // In cave, 'rock' job targets Ores
+                     if(inCave && playerState.job === 'stone' && o.userData.type === 'ore') return true;
+                     return (o.userData.type === targetType) || (targetType === 'rock' && o.userData.isCave);
+                 });
+                 
                  if(targets.length > 0) {
                      targets.sort((a,b)=>player.position.distanceTo(a.position)-player.position.distanceTo(b.position));
                      const t = targets[0];
                      const tg = t.userData.gridPos || t.parent.userData.gridPos;
                      const neighbors = [{x:tg.x+1, z:tg.z}, {x:tg.x-1, z:tg.z}, {x:tg.x, z:tg.z+1}, {x:tg.x, z:tg.z-1}];
-                     let spots = neighbors.filter(n => isTileAt(n.x,n.z) && !gameObjects.some(o=>(o.userData.gridPos||o.parent.userData.gridPos).x===n.x && (o.userData.gridPos||o.parent.userData.gridPos).z===n.z));
+                     let spots = neighbors.filter(n => isTileAt(n.x,n.z) && !activeObjects.some(o=>(o.userData.gridPos||o.parent.userData.gridPos).x===n.x && (o.userData.gridPos||o.parent.userData.gridPos).z===n.z));
                      spots.sort((a,b)=>player.position.distanceTo(getWorldPos(a.x,a.z))-player.position.distanceTo(getWorldPos(b.x,b.z)));
                      if(spots.length > 0) {
                          playerState.target = t;
@@ -1309,6 +1460,13 @@
                  const dest = playerState.standPos.clone();
                  if(player.position.distanceTo(dest) < 0.1) {
                      player.position.copy(dest); playerState.isMoving = false; playerState.actionTimer = Date.now();
+                     
+                     // Enter Cave Logic
+                     if(playerState.target && playerState.target.userData.isCave) {
+                         enterCave();
+                         return;
+                     }
+                     
                      if(playerState.job === 'fish') player.lookAt(playerState.lookAtTarget.x, player.position.y, playerState.lookAtTarget.z);
                      else if(playerState.target) player.lookAt(playerState.target.position.x, player.position.y, playerState.target.position.z);
                  } else {
