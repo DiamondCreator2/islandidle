@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Island Idle 3D</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #87CEEB; /* Sky blue fallback */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            position: absolute; /* Ensure it stays behind UI */
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            pointer-events: none;
+            display: flex;
+            gap: 15px;
+            z-index: 10; /* Above canvas */
+            flex-wrap: wrap;
+        }
+        .resource-box {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 0.7rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            opacity: 0.8;
+            margin-bottom: 2px;
+        }
+        .count {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+        #wood-display { color: #d7ccc8; } 
+        #stone-display { color: #cfd8dc; } 
+        #food-display { color: #ffe082; } 
+        #fish-display { color: #81d4fa; } 
+        #coin-display { color: #ffeb3b; }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            pointer-events: none;
+            opacity: 0.8;
+            font-size: 1rem;
+            z-index: 10;
+        }
+
+        /* Menus */
+        #build-menu, #shop-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            text-align: center;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 280px;
+            z-index: 100;
+        }
+        #build-menu h2, #shop-menu h2 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 1.2rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        /* Buttons */
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s, background 0.2s;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; transform: none; opacity: 0.7; }
+        
+        .btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            display: block;
+        }
+
+        /* Specific Button Colors */
+        .btn-wood { background: #795548; }
+        .btn-stone { background: #607D8B; }
+        .btn-fish { background: #039BE5; }
+        .btn-build { background: #FF9800; }
+        .btn-idle { background: #2196F3; }
+        .btn-close { background: #ef5350; margin-top: 5px;}
+        .btn-harvest { background: #FFC107; color: #3e2723; }
+        .btn-eat { background: #FF5722; }
+        .btn-cook { background: #E64A19; }
+        .btn-expand { background: #673AB7; }
+        .btn-feed { background: #F06292; }
+        .btn-shop { background: #9C27B0; width: auto; } /* Shop button in UI */
+        .btn-buy { background: #4CAF50; }
+        .btn-sell { background: #FF9800; }
+        
+        /* Cancel Circle Button */
+        .btn-cancel { 
+            background: #9E9E9E; 
+            width: 32px; 
+            height: 32px; 
+            padding: 0; 
+            border-radius: 50%; 
+            display: flex;
+            margin: 0;
+        }
+
+        .cost { font-size: 0.8rem; font-weight: normal; opacity: 0.9; margin-left: auto;}
+        .cost-error { color: #ffcdd2 !important; font-weight: bold; }
+        
+        .shop-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
+        }
+
+        /* Popups */
+        #tile-popup, #task-menu {
+            position: absolute;
+            display: none;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            z-index: 200;
+            transform: translate(-50%, -100%); 
+            pointer-events: auto;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 150px;
+            margin-top: -15px; 
+        }
+        #tile-popup::after, #task-menu::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -6px;
+            border-width: 6px;
+            border-style: solid;
+            border-color: white transparent transparent transparent;
+        }
+        .popup-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        /* Hunger Bar */
+        #hunger-container {
+            width: 100%;
+            height: 6px;
+            background: #eee;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+        }
+        #hunger-bar {
+            height: 100%;
+            width: 100%;
+            background: #FF9800;
+            transition: width 0.2s, background 0.2s;
+        }
+        
+        #shop-toggle-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            pointer-events: auto;
+            z-index: 20;
+        }
+
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="ui">
+        <div class="resource-box">
+            <h1>Coins</h1>
+            <div id="coin-display" class="count">0</div>
+        </div>
+        <div class="resource-box">
+            <h1>Wood</h1>
+            <div id="wood-display" class="count">0</div>
+        </div>
+        <div class="resource-box">
+            <h1>Stone</h1>
+            <div id="stone-display" class="count">0</div>
+        </div>
+        <div class="resource-box">
+            <h1>Food</h1>
+            <div id="food-display" class="count">0</div>
+        </div>
+        <div class="resource-box">
+            <h1>Fish</h1>
+            <div id="fish-display" class="count">0</div>
+        </div>
+    </div>
+    
+    <div id="shop-toggle-container">
+        <button class="btn btn-shop" onclick="openShop()">
+            <svg viewBox="0 0 24 24"><path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z" fill="currentColor"/></svg>
+            Shop
+        </button>
+    </div>
+
+    <!-- Task Menu -->
+    <div id="task-menu">
+        <div class="popup-row">
+            <button class="btn btn-wood" onclick="setJob('wood')" style="width:auto">
+                <svg viewBox="0 0 24 24"><path d="M14.5 2L12 4.5l3 3L17.5 5 14.5 2zm-4 4L8 8.5l3 3L13.5 9 10.5 6zM6 14l2 2 9-9-2-2-9 9z" fill="currentColor"/></svg>
+            </button>
+            <button class="btn btn-stone" onclick="setJob('stone')" style="width:auto">
+                <svg viewBox="0 0 24 24"><path d="M18.5 3.5l2 2L15 11l-2-2 5.5-5.5zM3 21l6-6M13.5 6.5l4 4M8.5 11.5L5 15l4 4 3.5-3.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+            </button>
+            <button class="btn btn-fish" onclick="setJob('fish')" style="width:auto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2c-5.5 0-10 4.5-10 10v3M20 7l-2-2M16 11l-2-2M12 15l-2-2M7 15c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3"/><circle cx="7" cy="18" r="1"/></svg>
+            </button>
+            <button class="btn btn-idle" onclick="setJob('none')" style="width:auto">
+                <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/></svg>
+            </button>
+            <button class="btn btn-eat" onclick="eatFood()" style="width:auto">
+                <svg viewBox="0 0 24 24"><path d="M16.5 4c-1.7 0-3 1.3-3 3 0 .4.1.7.2 1L6 15.5C4.5 17 4.5 19 6 20.5s3.5 1.5 5 0L18.5 13c.3.1.6.2 1 .2 1.7 0 3-1.3 3-3s-1.3-3-3-3l-3-3.2z" transform="rotate(45 12 12)" fill="currentColor"/></svg>
+            </button>
+            <button class="btn btn-cancel" onclick="closeMenu()">
+                <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+        <div id="hunger-container">
+            <div id="hunger-bar"></div>
+        </div>
+    </div>
+
+    <!-- Build Menu -->
+    <div id="build-menu">
+        <h2>Construct</h2>
+        <button class="btn btn-build" onclick="construct('farm')">Wheat Farm <span id="farm-cost" class="cost">(6W, 4S)</span></button>
+        <button id="btn-pumpkin" class="btn btn-build" onclick="construct('pumpkin')" style="display:none; background:#FB8C00;">Pumpkin Patch <span id="pump-cost" class="cost">(8W, 8S)</span></button>
+        <button class="btn btn-cook" onclick="construct('campfire')">Campfire <span id="camp-cost" class="cost">(5W, 5S)</span></button>
+        <button class="btn btn-expand" onclick="construct('expansion')">Expand Island <span id="exp-cost" class="cost">(10W, 10S)</span></button>
+        <button class="btn btn-close" onclick="closeBuildMenu()">Cancel</button>
+    </div>
+
+    <!-- Shop Menu -->
+    <div id="shop-menu">
+        <h2>Marketplace</h2>
+        
+        <div class="shop-row">
+            <span>Sell Wood (1)</span>
+            <button class="btn btn-sell" style="width:auto; padding: 5px 10px;" onclick="sell('wood')">+1 Coin</button>
+        </div>
+        <div class="shop-row">
+            <span>Sell Stone (1)</span>
+            <button class="btn btn-sell" style="width:auto; padding: 5px 10px;" onclick="sell('stone')">+1 Coin</button>
+        </div>
+        <div class="shop-row">
+            <span>Sell Fish (1)</span>
+            <button class="btn btn-sell" style="width:auto; padding: 5px 10px;" onclick="sell('fish')">+5 Coins</button>
+        </div>
+        <div class="shop-row">
+            <span>Sell Food (1)</span>
+            <button class="btn btn-sell" style="width:auto; padding: 5px 10px;" onclick="sell('food')">+2 Coins</button>
+        </div>
+        
+        <hr style="width:100%; border:0; border-top:1px solid #ddd; margin: 10px 0;">
+
+        <div class="shop-row">
+            <span>Buy Wood (5)</span>
+            <button class="btn btn-buy" style="width:auto; padding: 5px 10px;" onclick="buy('wood')">10 Coins</button>
+        </div>
+        <div id="seed-offer" class="shop-row">
+            <span>Pumpkin Seeds</span>
+            <button class="btn btn-buy" style="width:auto; padding: 5px 10px; background:#9C27B0;" onclick="buy('pumpkin_seeds')">50 Coins</button>
+        </div>
+
+        <button class="btn btn-close" onclick="closeShop()">Close</button>
+    </div>
+
+    <!-- Tile Popup -->
+    <div id="tile-popup">
+        <div class="popup-row">
+            <button id="btn-popup-build" class="btn btn-build" onclick="openBuildMenu()" style="width:auto">Build</button>
+            <button id="btn-popup-harvest" class="btn btn-harvest" onclick="executeHarvest()" style="display:none; width:auto">Harvest</button>
+            <button id="btn-popup-cook" class="btn btn-cook" onclick="executeCook()" style="display:none; width:auto">Cook</button>
+            <button id="btn-popup-feed" class="btn btn-feed" onclick="executeFeed()" style="display:none; width:auto">Feed</button>
+            <button id="btn-popup-destroy" class="btn btn-close" onclick="executeDestroy()" style="width:auto">Destroy</button>
+            <button class="btn btn-cancel" onclick="closePopup()">
+                <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="instructions">
+        Fish, Work, & Sell resources in Shop.<br>
+        Expand to find Caves & Trees.<br>
+        Unlock Pumpkins for more food!
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script>
+        // --- Constants & Config ---
+        const TILE_SIZE = 2;
+        const TILE_GAP = 0;
+        
+        // Grid
+        let minGridX = 0;
+        let maxGridX = 3;
+        let minGridZ = 0;
+        let maxGridZ = 3;
+        
+        // State
+        let resources = {
+            wood: 0,
+            stone: 0,
+            food: 5,
+            fish: 0,
+            coins: 0
+        };
+        
+        let unlocks = {
+            pumpkins: false
+        };
+
+        // UI Updates
+        const updateUI = () => {
+            document.getElementById('wood-display').innerText = resources.wood;
+            document.getElementById('stone-display').innerText = resources.stone;
+            document.getElementById('food-display').innerText = resources.food;
+            document.getElementById('fish-display').innerText = resources.fish;
+            document.getElementById('coin-display').innerText = resources.coins;
+        };
+        updateUI();
+
+        let playerState = {
+            job: 'none',        
+            target: null,       
+            standPos: null,     
+            lookAtTarget: null, 
+            isMoving: false,
+            actionTimer: 0,
+            hunger: 100
+        };
+
+        let selectedTile = null; 
+        
+        // Scene Objects
+        let scene, camera, renderer, raycaster, mouse;
+        let tiles = []; 
+        let water;
+        let player;
+        let gameObjects = []; 
+        let sharks = [];
+        let floatingTexts = []; 
+
+        const initialMap = [
+            [0, 1, 1, 0], 
+            [1, 1, 1, 1], 
+            [1, 1, 1, 1], 
+            [0, 1, 1, 0]  
+        ];
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87CEEB);
+
+            const aspect = window.innerWidth / window.innerHeight;
+            const d = 12;
+            camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+            camera.position.set(20, 20, 20); 
+            camera.lookAt(scene.position);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Initial Land
+            const geometry = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
+            for(let z=0; z<4; z++) {
+                for(let x=0; x<4; x++) {
+                    if(initialMap[z][x] === 1) {
+                        createLandTile(x, z, geometry);
+                    }
+                }
+            }
+
+            // Water
+            const waterGeo = new THREE.PlaneGeometry(1000, 1000);
+            const waterMat = new THREE.MeshStandardMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.8, roughness: 0.1 });
+            water = new THREE.Mesh(waterGeo, waterMat);
+            water.rotation.x = -Math.PI / 2;
+            water.position.y = -0.2; 
+            scene.add(water);
+
+            populateIsland();
+            createPlayer();
+            
+            // Sharks
+            for(let i=0; i<3; i++) createShark();
+
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('pointerdown', onPointerDown, false);
+
+            animate();
+            updateBuildCostUI();
+            updateHungerUI();
+        }
+
+        function createLandTile(x, z, geometry) {
+            const pos = getWorldPos(x, z);
+            const variation = (Math.random() - 0.5) * 0.2; 
+            const colorTop = new THREE.Color(0x4CAF50);
+            colorTop.offsetHSL(0, 0, variation);
+            const colorSide = new THREE.Color(0x795548);
+            colorSide.offsetHSL(0, 0, variation);
+            const matTop = new THREE.MeshStandardMaterial({ color: colorTop });
+            const matSide = new THREE.MeshStandardMaterial({ color: colorSide });
+            const materials = [matSide, matSide, matTop, matSide, matSide, matSide];
+
+            if(!geometry) geometry = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
+            const tile = new THREE.Mesh(geometry, materials);
+            tile.position.copy(pos);
+            tile.position.y = -0.5;
+            tile.receiveShadow = true;
+            tile.castShadow = true;
+            tile.userData = { initialY: -0.5, gridX: x, gridZ: z, isTile: true };
+            scene.add(tile);
+            tiles.push(tile);
+        }
+
+        function isTileAt(x, z) {
+            return tiles.some(t => t.userData.gridX === x && t.userData.gridZ === z);
+        }
+
+        function getWorldPos(gridX, gridZ) {
+            const cx = 1.5 * (TILE_SIZE + TILE_GAP);
+            const cz = 1.5 * (TILE_SIZE + TILE_GAP);
+            const x = gridX * (TILE_SIZE + TILE_GAP) - cx;
+            const z = gridZ * (TILE_SIZE + TILE_GAP) - cz;
+            return new THREE.Vector3(x, 0, z);
+        }
+
+        function populateIsland() {
+            createTree(getWorldPos(2, 2), {x:2, z:2});
+            createTree(getWorldPos(0, 1), {x:0, z:1});
+            createRock(getWorldPos(3, 1), {x:3, z:1});
+            createRock(getWorldPos(1, 3), {x:1, z:3});
+            createAnimal(getWorldPos(1, 2), {x:1, z:2});
+            createAnimal(getWorldPos(2, 1), {x:2, z:1});
+        }
+
+        // --- Object Creation ---
+        
+        function createShark() {
+            const group = new THREE.Group();
+            
+            // Fin
+            const finGeo = new THREE.BufferGeometry();
+            const vertices = new Float32Array([
+                0, 0, 0,
+                0, 0.5, 0.2,
+                0, 0, 0.6,
+                0, 0, 0,
+                0, 0, 0.6,
+                0, 0.5, 0.2
+            ]);
+            finGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            finGeo.computeVertexNormals();
+            
+            const mat = new THREE.MeshStandardMaterial({color: 0x607D8B, side: THREE.DoubleSide});
+            const fin = new THREE.Mesh(finGeo, mat);
+            group.add(fin);
+            
+            // Random start angle
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 15 + Math.random() * 10;
+            
+            group.position.set(Math.cos(angle) * radius, -0.4, Math.sin(angle) * radius);
+            group.rotation.y = -angle; // Face tangential roughly
+
+            group.userData = {
+                type: 'shark',
+                angle: angle,
+                radius: radius,
+                speed: 0.2 + Math.random() * 0.2
+            };
+            
+            scene.add(group);
+            sharks.push(group);
+        }
+
+        function createCave(pos, gridPos) {
+            const group = new THREE.Group();
+            group.position.copy(pos);
+            
+            // Big Rock Mound
+            const geo = new THREE.DodecahedronGeometry(0.9, 0);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x424242, flatShading: true });
+            const rock = new THREE.Mesh(geo, mat);
+            rock.scale.set(1.2, 0.8, 1.2);
+            rock.position.y = 0.4;
+            rock.castShadow = true;
+            group.add(rock);
+
+            // Dark Entrance
+            const entGeo = new THREE.CircleGeometry(0.4, 8);
+            const entMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const ent = new THREE.Mesh(entGeo, entMat);
+            ent.position.set(0, 0.3, 0.8);
+            ent.rotation.y = Math.PI; // Face front roughly (depends on placement rotation really, keeping simple)
+            group.add(ent);
+
+            group.userData = { type: 'rock', resource: 'stone', gridPos: gridPos, initialY: pos.y, isCave: true };
+            scene.add(group);
+            gameObjects.push(group);
+        }
+
+        function createTree(pos, gridPos) {
+            const group = new THREE.Group();
+            group.position.copy(pos);
+            const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 0.8, 6);
+            const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8D6E63 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 0.4;
+            trunk.castShadow = true;
+            group.add(trunk);
+            const leavesGeo = new THREE.ConeGeometry(0.8, 1.5, 8);
+            const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2E7D32 });
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            leaves.position.y = 1.2;
+            leaves.castShadow = true;
+            group.add(leaves);
+            group.userData = { type: 'tree', resource: 'wood', gridPos: gridPos, initialY: pos.y };
+            scene.add(group);
+            gameObjects.push(group);
+        }
+
+        function createRock(pos, gridPos) {
+            const geo = new THREE.DodecahedronGeometry(0.6, 0);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x9E9E9E, flatShading: true });
+            const rock = new THREE.Mesh(geo, mat);
+            rock.position.copy(pos);
+            rock.position.y = 0.3;
+            rock.rotation.set(Math.random(), Math.random(), Math.random());
+            rock.castShadow = true;
+            rock.userData = { type: 'rock', resource: 'stone', gridPos: gridPos, initialY: 0.3 };
+            scene.add(rock);
+            gameObjects.push(rock);
+        }
+
+        function createFarm(pos, gridPos, isPumpkin = false) {
+            const group = new THREE.Group();
+            group.position.copy(pos);
+            const bedGeo = new THREE.BoxGeometry(1.85, 0.25, 1.85);
+            const bedMat = new THREE.MeshStandardMaterial({ color: 0x5D4037 });
+            const bed = new THREE.Mesh(bedGeo, bedMat);
+            bed.position.y = 0.1; 
+            bed.receiveShadow = true;
+            group.add(bed);
+
+            // Soil Lines
+            const linesGeo = new THREE.BufferGeometry();
+            const points = [];
+            for(let i=0; i<=5; i++) {
+                const x = (i/5) * 1.6 - 0.8;
+                points.push(new THREE.Vector3(x, 0.26, -0.8));
+                points.push(new THREE.Vector3(x, 0.26, 0.8));
+            }
+            linesGeo.setFromPoints(points);
+            const linesMat = new THREE.LineBasicMaterial({ color: 0x3E2723, opacity: 0.7, transparent: true });
+            const furrows = new THREE.LineSegments(linesGeo, linesMat);
+            group.add(furrows);
+
+            // Crops
+            const crops = new THREE.Group();
+            let cropMat;
+
+            if (isPumpkin) {
+                // Pumpkins
+                cropMat = new THREE.MeshStandardMaterial({ color: 0xFF9800 });
+                for(let x=-1; x<=1; x+=2) {
+                    for(let z=-1; z<=1; z+=2) {
+                         const pGeo = new THREE.SphereGeometry(0.3, 8, 8);
+                         const pMesh = new THREE.Mesh(pGeo, cropMat);
+                         pMesh.position.set(x*0.4, 0.3, z*0.4);
+                         pMesh.scale.y = 0.7;
+                         crops.add(pMesh);
+                    }
+                }
+            } else {
+                // Wheat
+                cropMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50 });
+                for(let x=-1; x<=1; x++) {
+                    for(let z=-1; z<=1; z++) {
+                        const rx = x * 0.4 + (Math.random() - 0.5) * 0.2;
+                        const rz = z * 0.4 + (Math.random() - 0.5) * 0.2;
+                        const stalkGeo = new THREE.CylinderGeometry(0.02, 0.05, 0.5, 5);
+                        stalkGeo.translate(0, 0.25, 0); 
+                        const stalk = new THREE.Mesh(stalkGeo, cropMat);
+                        stalk.position.set(rx, 0.2, rz);
+                        stalk.scale.y = 0.8 + Math.random() * 0.4;
+                        crops.add(stalk);
+                    }
+                }
+            }
+            
+            crops.scale.set(0.1, 0.1, 0.1); 
+            group.add(crops);
+
+            group.userData = { 
+                type: 'farm', 
+                resource: 'food', 
+                gridPos: gridPos,
+                timer: 0,
+                growthTime: isPumpkin ? 1000 : 600, 
+                isReady: false,
+                cropsRef: crops,
+                cropMatRef: cropMat,
+                initialY: pos.y,
+                isPumpkin: isPumpkin
+            };
+            scene.add(group);
+            gameObjects.push(group);
+        }
+
+        function createCampfire(pos, gridPos) {
+            const group = new THREE.Group();
+            group.position.copy(pos);
+            
+            const stoneGeo = new THREE.DodecahedronGeometry(0.15);
+            const stoneMat = new THREE.MeshStandardMaterial({color: 0x555555});
+            for(let i=0; i<8; i++) {
+                const angle = (i/8) * Math.PI * 2;
+                const mesh = new THREE.Mesh(stoneGeo, stoneMat);
+                mesh.position.set(Math.cos(angle)*0.4, 0.1, Math.sin(angle)*0.4);
+                group.add(mesh);
+            }
+            
+            const fireGeo = new THREE.ConeGeometry(0.25, 0.5, 4);
+            const fireMat = new THREE.MeshBasicMaterial({color: 0xFF5722});
+            const fire = new THREE.Mesh(fireGeo, fireMat);
+            fire.position.y = 0.3;
+            group.add(fire);
+
+            group.userData = { type: 'campfire', gridPos: gridPos, initialY: pos.y, fireMesh: fire };
+            scene.add(group);
+            gameObjects.push(group);
+        }
+
+        function createAnimal(pos, gridPos, isBaby = false) {
+            const group = new THREE.Group();
+            group.position.copy(pos);
+            const s = isBaby ? 0.5 : 1.0;
+            group.scale.set(s,s,s);
+
+            const bodyGeo = new THREE.BoxGeometry(0.6, 0.4, 0.9);
+            const pigMat = new THREE.MeshStandardMaterial({color: 0xF48FB1});
+            const body = new THREE.Mesh(bodyGeo, pigMat);
+            body.position.y = 0.4;
+            body.castShadow = true;
+            group.add(body);
+
+            const headGeo = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+            const head = new THREE.Mesh(headGeo, pigMat);
+            head.position.set(0, 0.6, 0.55);
+            group.add(head);
+
+            const noseGeo = new THREE.BoxGeometry(0.2, 0.15, 0.1);
+            const noseMat = new THREE.MeshStandardMaterial({color: 0xF06292});
+            const nose = new THREE.Mesh(noseGeo, noseMat);
+            nose.position.set(0, 0.55, 0.76);
+            group.add(nose);
+
+            // Heart
+            const heartGeo = new THREE.SphereGeometry(0.2);
+            const heartMat = new THREE.MeshBasicMaterial({color: 0xFF0000});
+            const heart = new THREE.Mesh(heartGeo, heartMat);
+            heart.position.set(0, 1.2, 0);
+            heart.visible = false;
+            group.add(heart);
+
+            group.userData = {
+                type: 'animal',
+                gridPos: gridPos,
+                initialY: pos.y,
+                moveTimer: Date.now(),
+                loveMode: false,
+                loveTimer: 0,
+                heartRef: heart,
+                isBaby: isBaby,
+                growthTimer: isBaby ? Date.now() : 0
+            };
+            scene.add(group);
+            gameObjects.push(group);
+        }
+
+        function createPlayer() {
+            const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+            const material = new THREE.MeshStandardMaterial({ color: 0xff5722 }); 
+            player = new THREE.Mesh(geometry, material);
+            player.castShadow = true;
+            player.receiveShadow = true;
+            player.position.copy(getWorldPos(1, 1));
+            player.position.y = 0.4;
+            
+            // Eyes
+            const eyeGeo = new THREE.BoxGeometry(0.15, 0.15, 0.1);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const eye1 = new THREE.Mesh(eyeGeo, eyeMat);
+            eye1.position.set(0.15, 0.1, 0.41); 
+            player.add(eye1);
+            const eye2 = new THREE.Mesh(eyeGeo, eyeMat);
+            eye2.position.set(-0.15, 0.1, 0.41); 
+            player.add(eye2);
+
+            // Hunger Marks
+            const markMat = new THREE.MeshBasicMaterial({ color: 0xFF0000 });
+            const singleMark = new THREE.Group();
+            const part1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.3, 0.1), markMat);
+            part1.position.y = 0.25;
+            const dot1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), markMat);
+            dot1.position.y = 0.0;
+            singleMark.add(part1, dot1);
+            singleMark.position.set(0, 0.8, 0);
+            singleMark.visible = false;
+            player.add(singleMark);
+
+            const doubleMark = new THREE.Group();
+            const lPart = part1.clone(); lPart.position.x = -0.15;
+            const lDot = dot1.clone(); lDot.position.x = -0.15;
+            const rPart = part1.clone(); rPart.position.x = 0.15;
+            const rDot = dot1.clone(); rDot.position.x = 0.15;
+            doubleMark.add(lPart, lDot, rPart, rDot);
+            doubleMark.position.set(0, 0.8, 0);
+            doubleMark.visible = false;
+            player.add(doubleMark);
+
+            player.userData.hungerIndicators = { single: singleMark, double: doubleMark };
+            player.userData.isPlayer = true;
+            scene.add(player);
+        }
+
+        // --- Logic ---
+
+        function harvest(object) {
+            playerState.hunger = Math.max(0, playerState.hunger - 2);
+            updateHungerUI();
+
+            if(object.userData.resource === 'wood') {
+                resources.wood++;
+                createFloatingText("+1 Wood", object.position, '#8d6e63');
+                object.scale.set(1.2, 0.8, 1.2); 
+            } 
+            else if (object.userData.resource === 'stone') {
+                // If it's a cave, maybe double resources?
+                let amount = object.userData.isCave ? 2 : 1;
+                resources.stone += amount;
+                createFloatingText("+" + amount + " Stone", object.position, '#bdbdbd');
+                object.scale.set(1.2, 0.8, 1.2); 
+            }
+            else if (object.userData.resource === 'food') {
+                let amount = object.userData.isPumpkin ? 2 : 1;
+                resources.food += amount;
+                createFloatingText("+" + amount + " Food", object.position, '#FFD700');
+                
+                object.userData.isReady = false;
+                object.userData.timer = 0;
+                object.userData.cropsRef.scale.set(0.1, 0.1, 0.1);
+                object.userData.cropMatRef.color.setHex(object.userData.isPumpkin ? 0xFF9800 : 0x4CAF50); 
+            }
+            updateUI();
+            updateBuildCostUI();
+        }
+
+        function createFloatingText(text, pos, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 128;
+            context.font = "Bold 40px Arial";
+            context.fillStyle = color;
+            context.textAlign = "center";
+            context.strokeStyle = 'black';
+            context.lineWidth = 3;
+            context.strokeText(text, 128, 100);
+            context.fillText(text, 128, 100);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(material);
+            
+            sprite.position.copy(pos);
+            sprite.position.y += 1.5;
+            sprite.scale.set(4, 2, 1);
+            sprite.userData = { life: 1.0 }; 
+            scene.add(sprite);
+            floatingTexts.push(sprite);
+        }
+
+        // --- Shop & Economy ---
+        
+        window.openShop = function() {
+            document.getElementById('task-menu').style.display = 'none';
+            document.getElementById('build-menu').style.display = 'none';
+            document.getElementById('tile-popup').style.display = 'none';
+            document.getElementById('shop-menu').style.display = 'flex';
+        }
+        
+        window.closeShop = function() {
+            document.getElementById('shop-menu').style.display = 'none';
+        }
+
+        window.sell = function(item) {
+            let price = 0;
+            if (item === 'wood' && resources.wood > 0) { resources.wood--; price = 1; }
+            else if (item === 'stone' && resources.stone > 0) { resources.stone--; price = 1; }
+            else if (item === 'fish' && resources.fish > 0) { resources.fish--; price = 5; }
+            else if (item === 'food' && resources.food > 0) { resources.food--; price = 2; }
+            
+            if(price > 0) {
+                resources.coins += price;
+                updateUI();
+            }
+        }
+
+        window.buy = function(item) {
+            if (item === 'wood' && resources.coins >= 10) {
+                resources.coins -= 10;
+                resources.wood += 5;
+            }
+            else if (item === 'pumpkin_seeds' && resources.coins >= 50) {
+                resources.coins -= 50;
+                unlocks.pumpkins = true;
+                document.getElementById('seed-offer').style.display = 'none'; // Remove from shop
+                document.getElementById('btn-pumpkin').style.display = 'inline-block'; // Add to build
+                alert("Unlocked Pumpkin Farming!");
+            }
+            updateUI();
+        }
+
+        // --- Interaction ---
+
+        window.construct = function(type) {
+            if (type === 'expansion') {
+                if(resources.wood >= 10 && resources.stone >= 10) {
+                    resources.wood -= 10;
+                    resources.stone -= 10;
+                    updateUI();
+                    
+                    minGridX--; maxGridX++;
+                    minGridZ--; maxGridZ++;
+
+                    const geometry = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
+                    for(let z=minGridZ; z<=maxGridZ; z++) {
+                        for(let x=minGridX; x<=maxGridX; x++) {
+                            if(!isTileAt(x, z)) {
+                                createLandTile(x, z, geometry);
+                                // Spawn Resources (High Chance)
+                                if(Math.random() < 0.4) {
+                                    const pos = getWorldPos(x, z);
+                                    let rand = Math.random();
+                                    if(rand < 0.5) createTree(pos, {x,z});
+                                    else if(rand < 0.8) createRock(pos, {x,z});
+                                    else createCave(pos, {x,z}); // 20% of spawns are caves
+                                }
+                            }
+                        }
+                    }
+                    createFloatingText("Island Expanded!", player.position, '#673AB7');
+                    closeBuildMenu();
+                } else {
+                    createFloatingText("Need Resources!", player.position, '#FF0000');
+                }
+                return;
+            }
+
+            if (!selectedTile) return;
+
+            if (type === 'farm' || type === 'pumpkin') {
+                let wCost = type === 'pumpkin' ? 8 : 6;
+                let sCost = type === 'pumpkin' ? 8 : 4;
+                if(resources.wood >= wCost && resources.stone >= sCost) {
+                    resources.wood -= wCost;
+                    resources.stone -= sCost;
+                    updateUI();
+                    createFarm(selectedTile.worldPos, {x: selectedTile.gridX, z: selectedTile.gridZ}, type === 'pumpkin');
+                    createFloatingText("Farm Built!", selectedTile.worldPos, '#FFFFFF');
+                    closeBuildMenu();
+                } else {
+                     createFloatingText("Need Resources!", player.position, '#FF0000');
+                }
+            } else if (type === 'campfire') {
+                if(resources.wood >= 5 && resources.stone >= 5) {
+                    resources.wood -= 5;
+                    resources.stone -= 5;
+                    updateUI();
+                    createCampfire(selectedTile.worldPos, {x: selectedTile.gridX, z: selectedTile.gridZ});
+                    createFloatingText("Campfire Built!", selectedTile.worldPos, '#FF5722');
+                    closeBuildMenu();
+                } else {
+                     createFloatingText("Need Resources!", player.position, '#FF0000');
+                }
+            }
+        }
+        
+        // ... (Keep existing feed/cook/harvest/destroy logic)
+        // Re-implementing briefly to ensure connection
+        window.executeDestroy = function() {
+            if (!selectedTile || !selectedTile.occupiedBy) return;
+            const obj = selectedTile.occupiedBy;
+            scene.remove(obj);
+            const index = gameObjects.indexOf(obj);
+            if (index > -1) gameObjects.splice(index, 1);
+            createFloatingText("Destroyed!", selectedTile.worldPos, '#FF0000');
+            closePopup();
+        }
+        window.executeHarvest = function() {
+            if (!selectedTile || !selectedTile.occupiedBy) return;
+            harvest(selectedTile.occupiedBy);
+            closePopup();
+        }
+        window.executeCook = function() {
+            if (!selectedTile || !selectedTile.occupiedBy) return;
+            if(resources.fish >= 1 && resources.wood >= 1) {
+                resources.fish--; resources.wood--; resources.food += 3;
+                updateUI();
+                createFloatingText("+3 Food!", selectedTile.worldPos, '#FFD700');
+                closePopup();
+            } else { createFloatingText("Need Fish & Wood!", selectedTile.worldPos, '#FF0000'); }
+        }
+        window.executeFeed = function() {
+            if (!selectedTile || !selectedTile.occupiedBy) return;
+            const animal = selectedTile.occupiedBy;
+            if(resources.food >= 1) {
+                if(!animal.userData.loveMode && !animal.userData.isBaby) {
+                    resources.food--; updateUI();
+                    animal.userData.loveMode = true;
+                    animal.userData.loveTimer = 600;
+                    animal.userData.heartRef.visible = true;
+                    createFloatingText("Love!", animal.position, '#E91E63');
+                    closePopup();
+                } else createFloatingText("Not Hungry!", animal.position, '#FFFFFF');
+            } else createFloatingText("Need Food!", animal.position, '#FF0000');
+        }
+
+        // ... (Keep existing UI helper functions)
+        function updateBuildCostUI() { /* ... kept simple ... */ }
+        function updateHungerUI() {
+             const bar = document.getElementById('hunger-bar');
+             bar.style.width = playerState.hunger + '%';
+        }
+        
+        window.setJob = function(job) {
+            playerState.job = job;
+            playerState.target = null; playerState.standPos = null;
+            playerState.isMoving = false; 
+            if(player) player.position.y += 0.5; 
+            document.getElementById('task-menu').style.display = 'none';
+        }
+        window.eatFood = function() {
+            if (resources.food > 0 && playerState.hunger < 100) {
+                resources.food--; updateUI();
+                playerState.hunger = Math.min(100, playerState.hunger + 30);
+                updateHungerUI();
+                createFloatingText("Yum!", player.position, '#FF9800');
+            } else createFloatingText("No Food!", player.position, '#FF0000');
+        }
+
+        window.closeMenu = function() { document.getElementById('task-menu').style.display = 'none'; }
+        window.closePopup = function() { resetSelection(); document.getElementById('tile-popup').style.display = 'none'; }
+        window.openBuildMenu = function() { 
+            document.getElementById('tile-popup').style.display = 'none'; 
+            document.getElementById('build-menu').style.display = 'flex'; 
+        }
+        window.closeBuildMenu = function() { document.getElementById('build-menu').style.display = 'none'; resetSelection(); }
+        
+        // ... (Keep highlight/reset logic)
+        function highlightTile(tileMesh, occupant) {
+             if (selectedTile && selectedTile.mesh && selectedTile.mesh !== tileMesh) {
+                 selectedTile.mesh.position.y = selectedTile.mesh.userData.initialY;
+                 if (selectedTile.occupiedBy) selectedTile.occupiedBy.position.y = selectedTile.occupiedBy.userData.initialY || 0;
+             }
+             if (tileMesh) tileMesh.position.y = tileMesh.userData.initialY + 0.3;
+             if (occupant) occupant.position.y = (occupant.userData.initialY || 0) + 0.3;
+        }
+        function resetSelection() {
+            if (selectedTile) {
+                if (selectedTile.mesh) selectedTile.mesh.position.y = selectedTile.mesh.userData.initialY;
+                if (selectedTile.occupiedBy) selectedTile.occupiedBy.position.y = selectedTile.occupiedBy.userData.initialY || 0;
+            }
+            selectedTile = null;
+        }
+
+        function onPointerDown(event) {
+            if (event.target.closest('#tile-popup') || event.target.closest('#task-menu') || event.target.closest('#build-menu') || event.target.closest('#shop-menu') || event.target.closest('#shop-toggle-container')) return;
+            
+            // Close all
+            document.getElementById('tile-popup').style.display = 'none';
+            document.getElementById('build-menu').style.display = 'none';
+            document.getElementById('task-menu').style.display = 'none';
+            document.getElementById('shop-menu').style.display = 'none';
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+
+            // Check Farms first
+            const sceneIntersects = raycaster.intersectObjects(scene.children, true);
+            let clickedFarm = null;
+            for(let i=0; i<sceneIntersects.length; i++) {
+                let obj = sceneIntersects[i].object;
+                while(obj.parent && obj.parent.type !== 'Scene') {
+                    if(obj.userData.type === 'farm') { clickedFarm = obj; break; }
+                    obj = obj.parent;
+                }
+                if(clickedFarm) break;
+            }
+            if(clickedFarm && clickedFarm.userData.isReady) { resetSelection(); harvest(clickedFarm); return; }
+
+            // Check Player
+            const playerIntersect = raycaster.intersectObject(player, true);
+            if (playerIntersect.length > 0) {
+                resetSelection();
+                const taskMenu = document.getElementById('task-menu');
+                taskMenu.style.display = 'flex';
+                taskMenu.style.left = event.clientX + 'px';
+                taskMenu.style.top = (event.clientY - 20) + 'px';
+                updateHungerUI();
+                return;
+            }
+
+            // Check Tiles
+            const tileIntersects = raycaster.intersectObjects(tiles);
+            if(tileIntersects.length > 0) {
+                const tile = tileIntersects[0].object;
+                const gridPos = { x: tile.userData.gridX, z: tile.userData.gridZ };
+                let occupant = null;
+                gameObjects.forEach(obj => {
+                    const oGrid = obj.userData.gridPos || obj.parent.userData.gridPos;
+                    if(oGrid.x === gridPos.x && oGrid.z === gridPos.z) occupant = obj;
+                });
+                
+                highlightTile(tile, occupant);
+                selectedTile = { gridX: gridPos.x, gridZ: gridPos.z, worldPos: tile.position.clone(), occupiedBy: occupant, mesh: tile };
+
+                const popup = document.getElementById('tile-popup');
+                const btnBuild = document.getElementById('btn-popup-build');
+                const btnDestroy = document.getElementById('btn-popup-destroy');
+                const btnHarvest = document.getElementById('btn-popup-harvest');
+                const btnCook = document.getElementById('btn-popup-cook');
+                const btnFeed = document.getElementById('btn-popup-feed');
+
+                btnBuild.style.display = 'none'; btnDestroy.style.display = 'none';
+                btnHarvest.style.display = 'none'; btnCook.style.display = 'none'; btnFeed.style.display = 'none';
+
+                const dist = player.position.distanceTo(tile.position);
+                if (dist > 0.5) { 
+                    if (occupant) {
+                        btnDestroy.style.display = 'block';
+                        if (occupant.userData.type === 'farm') btnHarvest.style.display = 'block';
+                        if (occupant.userData.type === 'campfire') btnCook.style.display = 'block';
+                        if (occupant.userData.type === 'animal') btnFeed.style.display = 'block';
+                    } else btnBuild.style.display = 'block';
+                    popup.style.display = 'flex';
+                    popup.style.left = event.clientX + 'px';
+                    popup.style.top = (event.clientY - 20) + 'px';
+                } else resetSelection();
+            } else resetSelection();
+        }
+
+        // --- Loop ---
+        function update() {
+            const time = Date.now() * 0.001;
+            
+            // Update Sharks
+            sharks.forEach(shark => {
+                const s = shark.userData;
+                s.angle += s.speed * 0.01;
+                shark.position.set(Math.cos(s.angle) * s.radius, -0.4, Math.sin(s.angle) * s.radius);
+                shark.rotation.y = -s.angle;
+            });
+            
+            // ... (Player & Object Logic from previous version) ...
+            updatePlayer(time); // Calling existing player logic logic
+            
+            // Object animations
+            gameObjects.forEach(obj => {
+                // ... same as before ...
+                if(obj.userData.type === 'farm' && !obj.userData.isReady) {
+                    obj.userData.timer++;
+                    const progress = obj.userData.timer / obj.userData.growthTime;
+                    if(progress >= 1) {
+                         obj.userData.isReady = true;
+                         obj.userData.cropsRef.scale.set(1,1,1);
+                         obj.userData.cropMatRef.color.setHex(0xFFD700); // Gold
+                         if (obj.userData.isPumpkin) obj.userData.cropMatRef.color.setHex(0xFF6D00); // Deep Orange
+                    } else {
+                        const s = 0.1 + progress * 0.9;
+                        obj.userData.cropsRef.scale.set(s,s,s);
+                    }
+                }
+                // Animal logic (wandering/breeding)
+                if(obj.userData.type === 'animal') {
+                     // Wandering
+                     if(Date.now() - obj.userData.moveTimer > 4000 + Math.random()*4000) {
+                        obj.userData.moveTimer = Date.now();
+                        const gx = obj.userData.gridPos.x;
+                        const gz = obj.userData.gridPos.z;
+                        const neighbors = [{x:gx+1, z:gz}, {x:gx-1, z:gz}, {x:gx, z:gz+1}, {x:gx, z:gz-1}];
+                        neighbors.sort(() => Math.random() - 0.5);
+                        for(let n of neighbors) {
+                            if(isTileAt(n.x, n.z)) {
+                                const occupied = gameObjects.some(o => {
+                                    const og = o.userData.gridPos || o.parent.userData.gridPos;
+                                    return og.x === n.x && og.z === n.z;
+                                });
+                                if(!occupied) {
+                                    const newPos = getWorldPos(n.x, n.z);
+                                    obj.position.set(newPos.x, obj.userData.initialY, newPos.z);
+                                    obj.userData.gridPos = n;
+                                    obj.lookAt(newPos.x, obj.position.y, newPos.z);
+                                    break;
+                                }
+                            }
+                        }
+                     }
+                     // Growth
+                     if(obj.userData.isBaby && Date.now() - obj.userData.growthTimer > 10000) {
+                         obj.userData.isBaby = false;
+                         obj.scale.set(1,1,1);
+                         createFloatingText("Grew up!", obj.position, '#F48FB1');
+                     }
+                     // Breeding
+                     if(obj.userData.loveMode) {
+                        obj.userData.loveTimer--;
+                        if(obj.userData.loveTimer<=0) {
+                            obj.userData.loveMode = false; obj.userData.heartRef.visible = false;
+                        } else {
+                            const partner = gameObjects.find(o => o !== obj && o.userData.type === 'animal' && o.userData.loveMode);
+                            if(partner) {
+                                obj.userData.loveMode = false; obj.userData.heartRef.visible = false;
+                                partner.userData.loveMode = false; partner.userData.heartRef.visible = false;
+                                createFloatingText("Baby!", obj.position, '#F06292');
+                                createAnimal(getWorldPos(obj.userData.gridPos.x, obj.userData.gridPos.z), obj.userData.gridPos, true);
+                            }
+                        }
+                     }
+                }
+            });
+            
+            // Float text
+             for(let i = floatingTexts.length - 1; i >= 0; i--) {
+                const sprite = floatingTexts[i];
+                sprite.position.y += 0.05; sprite.userData.life -= 0.02;
+                sprite.material.opacity = sprite.userData.life;
+                if(sprite.userData.life <= 0) { scene.remove(sprite); floatingTexts.splice(i, 1); }
+            }
+        }
+        
+        // Duplicated player update function from previous context to ensure it runs
+        function updatePlayer(time) {
+            // (Same logic as before for movement/jobs)
+             if (Date.now() % 100 === 0 && playerState.hunger > 0) {
+                playerState.hunger -= 0.02;
+                if(playerState.hunger < 0) playerState.hunger = 0;
+                if(document.getElementById('task-menu').style.display !== 'none') updateHungerUI();
+            }
+            if (playerState.job === 'none') { player.position.y = 0.4; return; }
+
+            if (!playerState.target && !playerState.isMoving && !playerState.standPos) {
+                 if (playerState.job === 'fish') {
+                    let validSpots = [];
+                    tiles.forEach(tile => {
+                        const gx = tile.userData.gridX; const gz = tile.userData.gridZ;
+                        const occupied = gameObjects.some(o => { const og = o.userData.gridPos || o.parent.userData.gridPos; return og.x === gx && og.z === gz; });
+                        if(!occupied) {
+                             const neighbors = [{x:gx+1, z:gz}, {x:gx-1, z:gz}, {x:gx, z:gz+1}, {x:gx, z:gz-1}];
+                             const waterN = neighbors.find(n => !isTileAt(n.x, n.z));
+                             if(waterN) validSpots.push({pos: tile.position, lookAt: getWorldPos(waterN.x, waterN.z)});
+                        }
+                    });
+                    if(validSpots.length > 0) {
+                        validSpots.sort((a,b)=>player.position.distanceTo(a.pos)-player.position.distanceTo(b.pos));
+                        playerState.standPos = validSpots[0].pos.clone(); playerState.standPos.y = 0.4;
+                        playerState.lookAtTarget = validSpots[0].lookAt.clone();
+                        playerState.isMoving = true; playerState.target = "water";
+                    }
+                    return;
+                 }
+                 // Wood/Stone logic
+                 const targetType = playerState.job === 'wood' ? 'tree' : 'rock';
+                 let targets = gameObjects.filter(o => (o.userData.type === targetType) || (targetType === 'rock' && o.userData.isCave));
+                 if(targets.length > 0) {
+                     targets.sort((a,b)=>player.position.distanceTo(a.position)-player.position.distanceTo(b.position));
+                     const t = targets[0];
+                     const tg = t.userData.gridPos || t.parent.userData.gridPos;
+                     const neighbors = [{x:tg.x+1, z:tg.z}, {x:tg.x-1, z:tg.z}, {x:tg.x, z:tg.z+1}, {x:tg.x, z:tg.z-1}];
+                     let spots = neighbors.filter(n => isTileAt(n.x,n.z) && !gameObjects.some(o=>(o.userData.gridPos||o.parent.userData.gridPos).x===n.x && (o.userData.gridPos||o.parent.userData.gridPos).z===n.z));
+                     spots.sort((a,b)=>player.position.distanceTo(getWorldPos(a.x,a.z))-player.position.distanceTo(getWorldPos(b.x,b.z)));
+                     if(spots.length > 0) {
+                         playerState.target = t;
+                         playerState.standPos = getWorldPos(spots[0].x, spots[0].z); playerState.standPos.y = 0.4;
+                         playerState.isMoving = true;
+                     }
+                 }
+            }
+
+            if(playerState.isMoving) {
+                 const dest = playerState.standPos.clone();
+                 if(player.position.distanceTo(dest) < 0.1) {
+                     player.position.copy(dest); playerState.isMoving = false; playerState.actionTimer = Date.now();
+                     if(playerState.job === 'fish') player.lookAt(playerState.lookAtTarget.x, player.position.y, playerState.lookAtTarget.z);
+                     else if(playerState.target) player.lookAt(playerState.target.position.x, player.position.y, playerState.target.position.z);
+                 } else {
+                     const dir = new THREE.Vector3().subVectors(dest, player.position).normalize();
+                     player.position.add(dir.multiplyScalar(0.08));
+                     player.lookAt(dest);
+                 }
+            } else if(playerState.target || playerState.job === 'fish') {
+                 let delay = playerState.hunger < 10 ? 3000 : 1000;
+                 if(Date.now() - playerState.actionTimer > delay) {
+                     if(playerState.job === 'fish') {
+                         resources.fish++; updateUI(); createFloatingText("+1 Fish", player.position, '#29B6F6');
+                         playerState.actionTimer = Date.now(); playerState.hunger = Math.max(0, playerState.hunger-1);
+                     } else if(playerState.target) {
+                         harvest(playerState.target);
+                         playerState.target = null; playerState.standPos = null;
+                     }
+                 }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            update();
+            renderer.render(scene, camera);
+        }
+        function onWindowResize() {
+            const aspect = window.innerWidth / window.innerHeight;
+            const d = 12;
+            camera.left = -d * aspect; camera.right = d * aspect;
+            camera.top = d; camera.bottom = -d;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        init();
+    </script>
+</body>
+</html>
