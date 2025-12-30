@@ -1121,14 +1121,23 @@
             if(inCave) { createFloatingText("Can't build here!", player.position, '#FF0000'); return; }
 
             if (type === 'expansion') {
+                // Check if max size (10x10) reached
+                // Initial is 4. Each expansion adds 2 to width/height.
+                // 3 expansions = 10x10.
+                if (maxGridX - minGridX + 1 >= 10) {
+                     createFloatingText("Max Size Reached!", player.position, '#FF0000');
+                     return;
+                }
+
                 const cost = getExpansionCost();
                 if(resources.wood >= cost && resources.stone >= cost) {
                     resources.wood -= cost; resources.stone -= cost; updateUI();
                     
                     expansionCount++;
-                    updateBuildCostUI(); // Update label for next time
+                    minGridX--; maxGridX++; minGridZ--; maxGridZ++; // Expand grid boundaries
+                    
+                    updateBuildCostUI(); // Update UI to reflect new cost or max state
 
-                    minGridX--; maxGridX++; minGridZ--; maxGridZ++;
                     const geometry = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
                     for(let z=minGridZ; z<=maxGridZ; z++) {
                         for(let x=minGridX; x<=maxGridX; x++) {
@@ -1214,9 +1223,21 @@
 
         // ... UI helpers ...
         function updateBuildCostUI() { 
-            const cost = getExpansionCost();
-            const el = document.getElementById('exp-cost');
-            if(el) el.innerText = `(${cost}W, ${cost}S)`;
+            const currentSize = maxGridX - minGridX + 1;
+            const btn = document.querySelector('.btn-expand');
+            const costLabel = document.getElementById('exp-cost');
+
+            if (currentSize >= 10) {
+                if(btn) {
+                    btn.innerHTML = "Max Size Reached";
+                    btn.disabled = true;
+                    btn.style.background = "#9E9E9E";
+                    btn.style.cursor = "not-allowed";
+                }
+            } else {
+                const cost = getExpansionCost();
+                if(costLabel) costLabel.innerText = `(${cost}W, ${cost}S)`;
+            }
         }
         function updateHungerUI() {
              const bar = document.getElementById('hunger-bar');
