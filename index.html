@@ -398,6 +398,8 @@
             pumpkins: false
         };
         
+        let expansionCount = 0; // Added to track expansions
+
         let inCave = false;
         let lastIslandPosition = new THREE.Vector3(0, 0.4, 0);
 
@@ -1029,6 +1031,8 @@
                     let arr = inCave ? caveObjects : islandObjects;
                     const idx = arr.indexOf(object);
                     if(idx > -1) arr.splice(idx, 1);
+
+                    updateUI(); // Fix: Update UI immediately for ores
                     return; // Don't do scale anim if removed
                     
                 } else {
@@ -1105,12 +1109,25 @@
         }
 
         // --- Interaction ---
+        
+        function getExpansionCost() {
+            const base = 10;
+            const increase = 5;
+            const cost = base + (expansionCount * increase);
+            return cost;
+        }
+
         window.construct = function(type) {
             if(inCave) { createFloatingText("Can't build here!", player.position, '#FF0000'); return; }
 
             if (type === 'expansion') {
-                if(resources.wood >= 10 && resources.stone >= 10) {
-                    resources.wood -= 10; resources.stone -= 10; updateUI();
+                const cost = getExpansionCost();
+                if(resources.wood >= cost && resources.stone >= cost) {
+                    resources.wood -= cost; resources.stone -= cost; updateUI();
+                    
+                    expansionCount++;
+                    updateBuildCostUI(); // Update label for next time
+
                     minGridX--; maxGridX++; minGridZ--; maxGridZ++;
                     const geometry = new THREE.BoxGeometry(TILE_SIZE, 1, TILE_SIZE);
                     for(let z=minGridZ; z<=maxGridZ; z++) {
@@ -1129,7 +1146,7 @@
                     }
                     createFloatingText("Island Expanded!", player.position, '#673AB7');
                     closeBuildMenu();
-                } else { createFloatingText("Need Resources!", player.position, '#FF0000'); }
+                } else { createFloatingText(`Need ${cost} Wood & Stone!`, player.position, '#FF0000'); }
                 return;
             }
 
@@ -1196,7 +1213,11 @@
         }
 
         // ... UI helpers ...
-        function updateBuildCostUI() { }
+        function updateBuildCostUI() { 
+            const cost = getExpansionCost();
+            const el = document.getElementById('exp-cost');
+            if(el) el.innerText = `(${cost}W, ${cost}S)`;
+        }
         function updateHungerUI() {
              const bar = document.getElementById('hunger-bar');
              bar.style.width = playerState.hunger + '%';
