@@ -1012,15 +1012,33 @@
                 if (object.userData.type === 'ore') {
                     // Ore logic
                     resources.stone += 2;
-                    let val = 1;
+                    
+                    // --- NEW CHANCE LOGIC ---
+                    let val = 0;
+                    const chance = Math.random();
+                    
+                    if (chance < (1/6)) {
+                        // 1 in 6 chance for 2 coins
+                        val = 2;
+                    } else if (chance < 0.5) { 
+                        // (1/6 + 1/3) = 0.5
+                        // This covers the next "1 in 3" slice
+                        val = 1;
+                    }
+                    
                     let txt = "+2 Stone";
                     let col = '#cfd8dc';
                     
-                    if(object.userData.oreType === 'gold') { val=5; txt+=", +5 Coins"; col='#FFD700'; }
-                    if(object.userData.oreType === 'iron') { val=3; txt+=", +3 Coins"; col='#A1887F'; }
-                    if(object.userData.oreType === 'diamond') { val=15; txt+=", +15 Coins"; col='#29B6F6'; }
+                    if (val > 0) {
+                        resources.coins += val;
+                        txt += `, +${val} Coin${val > 1 ? 's' : ''}`;
+                        col = '#FFD700'; // Gold color for coins
+                    } else {
+                        // Keep ore color if no coins, just for visual feedback
+                        if(object.userData.oreType === 'iron') col = '#A1887F';
+                        if(object.userData.oreType === 'diamond') col = '#29B6F6';
+                    }
                     
-                    resources.coins += val;
                     createFloatingText(txt, object.position, col);
                     
                     // Destroy ore
