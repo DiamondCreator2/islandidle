@@ -1498,7 +1498,11 @@
                  let targets = activeObjects.filter(o => {
                      // In cave, 'rock' job targets Ores
                      if(inCave && playerState.job === 'stone' && o.userData.type === 'ore') return true;
-                     return (o.userData.type === targetType) || (targetType === 'rock' && o.userData.isCave);
+                     
+                     // Exclude cave entrances from auto-mining jobs
+                     if(o.userData.isCave) return false;
+
+                     return (o.userData.type === targetType);
                  });
                  
                  if(targets.length > 0) {
